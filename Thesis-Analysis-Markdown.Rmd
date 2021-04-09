@@ -11,9 +11,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r, include=FALSE}
 # Set WD, load packages, libraries  ####
-setwd("/Users/natebender/Desktop/Repo/Thesis-Analysis/")
+setwd("/Users/natebender/Desktop/Repo/RCthesisanalysis/")
 install.packages("ltm")
-
 library(psych)
 library(tidyverse)
 library(dplyr)
@@ -55,13 +54,12 @@ d %>%
 ```
 
 $$\\[.1in]$$
-
 ## Principal Components Analysis
 
 ### Dynamic Norms
 Both the backward-looking and forward-looking dynamic norm questions load on a single factor
 ```{r}
-d_pca_dynamicnorms <- d_accept %>% 
+d_pca_dynamicnorms <- d_accept %>%
   select(
     matches("sr_24"),
     matches("sr_25"))
@@ -139,6 +137,12 @@ print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
 
+#### Injunctive Norms - Cronbach Alpha
+```{r}
+psych::alpha(d_pca_injunctivenorms, use ="pairwise", na.rm = TRUE) 
+```
+
+
 ### CIM - Benefits
 They appear to load well on one factor but I expanded the analysis to 2 factors to hopefully show that fit. 
 ```{r}
@@ -152,6 +156,11 @@ fa.parallel(d_pca_CIMbenefits, fm='minres', fa='fa')
 pca1 <- fa(d_pca_CIMbenefits, nfactors = 2, rotate = "Varimax", fm="minres") 
 print(pca1)
 print(pca1$loadings,cutoff = 0.3)
+```
+
+#### CIM - Benefits - Cronbach Alpha
+```{r}
+psych::alpha(d_pca_CIMbenefits, use ="pairwise", na.rm = TRUE) 
 ```
 
 ### CIM - Costs
@@ -185,6 +194,11 @@ print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
 
+#### CIM - Costs - Cronbach Alpha
+```{r}
+psych::alpha(d_pca_CIMcosts, use ="pairwise", na.rm = TRUE) 
+```
+
 ### CIM - Perceived Risk
 ```{r}
 d_pca_CIMperceivedrisk <- d_accept %>% 
@@ -202,6 +216,11 @@ print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
 
+#### CIM - Perceived Risk - Cronbach Alpha
+```{r}
+psych::alpha(d_pca_CIMperceivedrisk, use ="pairwise", na.rm = TRUE) 
+```
+
 ### Efficacy
 They appear to load well on one factor but I expanded the analysis to 2 factors to hopefully show that fit. 
 ```{r}
@@ -216,6 +235,11 @@ fa.parallel(d_pca_efficacy, fm='minres', fa='fa')
 pca1 <- fa(d_pca_efficacy, nfactors = 3, rotate = "Varimax", fm="minres") 
 print(pca1)
 print(pca1$loadings,cutoff = 0.3)
+```
+
+#### Efficacy - Cronbach Alpha
+```{r}
+psych::alpha(d_pca_efficacy, use ="pairwise", na.rm = TRUE) 
 ```
 
 ### TPB Behavioral Attitude
@@ -237,6 +261,13 @@ print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
 
+#### TPB Behavioral Attitude - Cronbach Alpha
+Alpha of .64 with 95% CI .61-.68
+
+```{r}
+psych::alpha(d_pca_behavioralattitude, use ="pairwise", na.rm = TRUE) 
+```
+
 ### Perceived Behavioral Control
 Both items clearly load on one factor
 ```{r}
@@ -251,6 +282,11 @@ print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
 
+#### Perceived Behavioral Control - Cronbach Alpha
+```{r}
+psych::alpha(d_pca_perceivedcontrol, use ="pairwise", na.rm = TRUE) 
+```
+
 ### Worldviews
 ```{r}
 d_pca_worldviews <- d_accept %>% 
@@ -261,4 +297,11 @@ fa.parallel(d_pca_worldviews, fm='minres', fa='fa')
 pca1 <- fa(d_pca_worldviews, nfactors = 2, rotate = "Varimax", fm="minres") 
 print(pca1)
 print(pca1$loadings,cutoff = 0.3)
+```
+
+#### Worldviews - Cronbach Alpha
+Alpha .62 with 95% CI of .58-.65
+
+```{r}
+psych::alpha(d_pca_worldviews, use ="pairwise", na.rm = TRUE) 
 ```
