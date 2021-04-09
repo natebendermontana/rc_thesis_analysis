@@ -1,0 +1,264 @@
+---
+title: "Thesis Analysis: National Survey (Aug 3-9, 2020)"
+author: "Nate Bender"
+date: "4/7/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+# Set WD, load packages, libraries  ####
+setwd("/Users/natebender/Desktop/Repo/Thesis-Analysis/")
+install.packages("ltm")
+
+library(psych)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggfortify)
+library(GPArotation)
+library(ltm)
+```
+
+```{r, include=FALSE}
+# Load data, create second dataset of only accepted responses
+d <- read.csv("/Users/natebender/Desktop/Graduate_School/Thesis/All-for-1.5/Analysis/dyn_national_20200828 - results-20200930-082116_TEST.csv")
+
+d_accept <- d %>% 
+  filter(reject==0)
+```
+
+```{r eval=FALSE, include=FALSE}
+# EDA ####
+# Number of respondents / rejects
+respondents <- d %>% 
+  filter(reject==0) %>% 
+  count(respondent_id)
+
+rejected <- d %>% 
+  filter(reject==1) %>% 
+  count(respondent_id)
+
+# EDA --IN PROGRESS--
+d %>% 
+  filter(reject==0) %>%
+  count(age) 
+  
+  
+  summarize(meanage = mean(age),
+            minage = min(age),
+            maxage = max(age),
+            total = n())
+```
+
+$$\\[.1in]$$
+
+## Principal Components Analysis
+
+### Dynamic Norms
+Both the backward-looking and forward-looking dynamic norm questions load on a single factor
+```{r}
+d_pca_dynamicnorms <- d_accept %>% 
+  select(
+    matches("sr_24"),
+    matches("sr_25"))
+
+fa.parallel(d_pca_dynamicnorms, fm='minres', fa='fa')
+pca1 <- fa(d_pca_dynamicnorms, nfactors = 1, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+#### Dynamic Norms - Cronbach Alpha
+```{r}
+psych::alpha(d_pca_dynamicnorms, use ="pairwise", na.rm = TRUE) 
+```
+
+### Descriptive Norms
+**"com"** in the rmd file?? Don't know what results that refers to 
+```{r}
+d_pca_descriptivenorms <- d_accept %>% 
+  select(
+    matches("sr_19a"),
+    matches("sr_19b"),
+    matches("sr_19c"),
+    matches("sr_19d"),
+    matches("sr_19e"),
+    matches("sr_19f"),
+    matches("sr_19g"),
+    matches("sr_19h"),
+    matches("sr_20a"),
+    matches("sr_20b"),
+    matches("sr_20c"),
+    matches("sr_20d"),
+    matches("sr_20e"),
+    matches("sr_20f"),
+    matches("sr_20g"),
+    matches("sr_20h"))
+    
+fa.parallel(d_pca_descriptivenorms, fm='minres', fa='fa')
+pca1 <- fa(d_pca_descriptivenorms, nfactors = 5, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+#### Descriptive Norms - Cronbach Alpha
+```{r}
+psych::alpha(d_pca_descriptivenorms, use ="pairwise", na.rm = TRUE) 
+```
+
+
+### Injunctive Norms
+text text text
+```{r}
+d_pca_injunctivenorms <- d_accept %>% 
+  select(
+    matches("sr_22a"),
+    matches("sr_22b"),
+    matches("sr_22c"),
+    matches("sr_22d"),
+    matches("sr_22e"),
+    matches("sr_22f"),
+    matches("sr_22g"),
+    matches("sr_22h"),
+    matches("sr_23a"),
+    matches("sr_23b"),
+    matches("sr_23c"),
+    matches("sr_23d"),
+    matches("sr_23e"),
+    matches("sr_23f"),
+    matches("sr_23g"),
+    matches("sr_23h"))
+
+fa.parallel(d_pca_injunctivenorms, fm='minres', fa='fa')
+pca1 <- fa(d_pca_injunctivenorms, nfactors = 5, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+### CIM - Benefits
+They appear to load well on one factor but I expanded the analysis to 2 factors to hopefully show that fit. 
+```{r}
+d_pca_CIMbenefits <- d_accept %>% 
+  select(
+    matches("sr_16"),
+    matches("sr_17"),
+    matches("sr_18"))
+
+fa.parallel(d_pca_CIMbenefits, fm='minres', fa='fa')
+pca1 <- fa(d_pca_CIMbenefits, nfactors = 2, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+### CIM - Costs
+**Getting errors with the PCA code. IN PROGRESS**
+**Have not yet set up new column for sr_57 question about # of children. Need to change it to two options: Dependents (0-n children under 17years old), Older Children (0-n children 18+ years old)**
+
+```{r eval=F, include=F}
+d_pca_CIMcosts <- d_accept %>% 
+  select(-"age_range") %>%
+  select(
+    starts_with("age"),
+    starts_with("sr_57"),
+    matches("gender"),
+    matches("sr_61"),
+    matches("sr_71_employment_status"),
+    matches("sr_72"),
+    matches("sr_74_1_race_white"),
+    matches("sr_74_2_race_black"),
+    matches("sr_74_3_race_hispanic"),
+    matches("sr_74_1_race_native_american"),
+    matches("sr_74_5_race_east_asian"),
+    matches("sr_74_6_race_middle_eastern"),
+    matches("sr_74_7_race_south_asian"),
+    matches("sr_74_8_race_no_answer"),
+    matches("sr_78_political_affiliation"),
+    matches("sr_79"))
+
+fa.parallel(d_pca_CIMcosts, fm='minres', fa='fa')
+pca1 <- fa(d_pca_CIMcosts, nfactors = 2, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+### CIM - Perceived Risk
+```{r}
+d_pca_CIMperceivedrisk <- d_accept %>% 
+  select(
+    matches("sr_3b_importance_climatechange"),
+    matches("sr_7_believe_about_climate_change"),
+    matches("sr_8_importance_personally"),
+    matches("sr_9_worried"),
+    matches("sr_10_harm_you_personally"),
+    matches("sr_11_harm_future_generations"))
+
+fa.parallel(d_pca_CIMperceivedrisk, fm='minres', fa='fa')
+pca1 <- fa(d_pca_CIMperceivedrisk, nfactors = 2, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+### Efficacy
+They appear to load well on one factor but I expanded the analysis to 2 factors to hopefully show that fit. 
+```{r}
+d_pca_efficacy <- d_accept %>% 
+  select(
+    matches("sr_21a"),
+    matches("sr_27[a-d]"),
+    matches("sr_28[a-d]"),
+    matches("sr_29[a-d]"))
+
+fa.parallel(d_pca_efficacy, fm='minres', fa='fa')
+pca1 <- fa(d_pca_efficacy, nfactors = 3, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+### TPB Behavioral Attitude
+```{r}
+d_pca_behavioralattitude <- d_accept %>% 
+  select(
+    matches("sr_32"),
+    matches("sr_33"),
+    matches("sr_34"),
+    matches("sr_35"),
+    matches("sr_36"),
+    matches("sr_37"),
+    matches("sr_38"),
+    matches("sr_39"))
+
+fa.parallel(d_pca_behavioralattitude, fm='minres', fa='fa')
+pca1 <- fa(d_pca_behavioralattitude, nfactors = 3, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+### Perceived Behavioral Control
+Both items clearly load on one factor
+```{r}
+d_pca_perceivedcontrol <- d_accept %>% 
+  select(
+    matches("sr_30"),
+    matches("sr_31"))
+
+fa.parallel(d_pca_perceivedcontrol, fm='minres', fa='fa')
+pca1 <- fa(d_pca_perceivedcontrol, nfactors = 1, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+### Worldviews
+```{r}
+d_pca_worldviews <- d_accept %>% 
+  select(
+    matches("sr_41[a-f]"))
+
+fa.parallel(d_pca_worldviews, fm='minres', fa='fa')
+pca1 <- fa(d_pca_worldviews, nfactors = 2, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
