@@ -1,0 +1,60 @@
+---
+title: "testing-space"
+author: "Nate Bender"
+date: "4/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, eval=TRUE, include=FALSE}
+setwd("/Users/natebender/Desktop/Repo/RCthesisanalysis/")
+# install.packages("ltm")
+library(psych)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggfortify)
+library(GPArotation)
+library(ltm)
+library(ggpubr)
+```
+
+```{r, include=FALSE}
+# Load data, create second dataset of only accepted responses
+d <- read.csv("/Users/natebender/Desktop/Graduate_School/Thesis/All-for-1.5/Analysis/dyn_national_20200828 - results-20200930-082116_TEST.csv")
+
+d_accept <- d %>% 
+  filter(reject==0)
+```
+
+## Principal Components Analysis
+
+### Dynamic Norms
+```{r eval=F, include=F}
+# Visualize variables
+ggscatter(d_accept, x = "sr_24_past_contact", y = "sr_25_future_contact", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Test x", ylab = "Test Y")
+
+shapiro.test(d_accept$sr_24_past_contact)
+ggqqplot(d_accept$sr_24_past_contact, ylab = "past contact")
+
+shapiro.test(d_accept$sr_25_future_contact)
+ggqqplot(d_accept$sr_25_future_contact, ylab = "future contact")
+```
+
+```{r warning=F}
+res <- cor.test(d_accept$sr_24_past_contact,d_accept$sr_25_future_contact, method = "spearman")
+```
+Correlation test of the two dynamic norms items, showing strong pos correlation. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
+
+
+### Perceived Behavioral Control
+```{r warning=F}
+res1 <- cor.test(d_accept$sr_30_easy_to_call,d_accept$sr_31_able_to_call, method = "spearman")
+```
+The two measures of perceived behavioral control show a moderate positive relationship. Spearman's rho is `r res1$estimate` with a p-value of `r res1$p.value`.

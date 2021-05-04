@@ -1,7 +1,7 @@
 ---
 title: "Thesis Analysis: National Survey (Aug 3-9, 2020)"
 author: "Nate Bender"
-date: "4/7/2021"
+date: "5/4/2021"
 output: html_document
 ---
 
@@ -9,10 +9,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r, include=FALSE}
-# Set WD, load packages, libraries  ####
+```{r, eval=TRUE, include=FALSE}
 setwd("/Users/natebender/Desktop/Repo/RCthesisanalysis/")
-install.packages("ltm")
+# install.packages("ltm")
 library(psych)
 library(tidyverse)
 library(dplyr)
@@ -20,17 +19,18 @@ library(ggplot2)
 library(ggfortify)
 library(GPArotation)
 library(ltm)
+library(ggpubr)
 ```
 
 ```{r, include=FALSE}
 # Load data, create second dataset of only accepted responses
-d <- read.csv("/Users/natebender/Desktop/Graduate_School/Thesis/All-for-1.5/Analysis/dyn_national_20200828 - results-20200930-082116_TEST.csv")
+d <- read.csv("/Users/natebender/Desktop/Graduate_School/Thesis/All-for-1.5/Analysis/dyn_national_20200828 - results-20200930-082116_NEW.csv")
 
 d_accept <- d %>% 
   filter(reject==0)
 ```
 
-```{r eval=FALSE, include=FALSE}
+```{r, eval=TRUE, include=FALSE}
 # EDA ####
 # Number of respondents / rejects
 respondents <- d %>% 
@@ -40,46 +40,67 @@ respondents <- d %>%
 rejected <- d %>% 
   filter(reject==1) %>% 
   count(respondent_id)
-
-# EDA --IN PROGRESS--
-d %>% 
-  filter(reject==0) %>%
-  count(age) 
-  
-  
-  summarize(meanage = mean(age),
-            minage = min(age),
-            maxage = max(age),
-            total = n())
 ```
 
-$$\\[.1in]$$
-## Principal Components Analysis
+# Setup / EDA
+After filtering the `r count(rejected)` rejected respondents, we're left with `r count(respondents)` valid respondents in the dataset. 
+
+Gender breakdown of respondents is as follows: 
+```{r, eval=T, echo=F}
+# EDA --IN PROGRESS--
+# There are 1055 respondents in d_accept, but I can only find a sum of 1049 respondents across all gender options and I can't find a way to display those skips/"n/a"s???
+d_accept %>% 
+  summarize(female = sum(gender==1, na.rm = TRUE),
+            femalepercent = sum(gender==1, na.rm = TRUE)/sum(gender, na.rm =TRUE),
+            male = sum(gender==2, na.rm = TRUE),
+            malepercent = sum(gender==2, na.rm = TRUE)/sum(gender, na.rm =TRUE),
+            other = sum(gender==3, na.rm = TRUE),
+            otherpercent = sum(gender==3, na.rm = TRUE)/sum(gender, na.rm =TRUE),
+            noanswer = sum(gender==4, na.rm = TRUE),
+            noanswerpercent = sum(gender==4, na.rm = TRUE)/sum(gender, na.rm =TRUE),
+            total = sum((gender==1)+(gender==2)+(gender==3)+(gender==4), na.rm = TRUE))
+```
+
+# Principal Components Analysis
+$$\\[.05in]$$
 
 ### Dynamic Norms
-Both the backward-looking and forward-looking dynamic norm questions load on a single factor
-```{r}
-d_pca_dynamicnorms <- d_accept %>%
-  select(
-    matches("sr_24"),
-    matches("sr_25"))
+*"Do you think that over the PAST/NEXT 12 months the percentage of adults in the United States who contacted elected officials to urge them to take action to reduce global warming is..."*
+```{r eval=F, include=F}
+# Visualize variables
+# *** Need to address errors in this visualization code ***
 
-fa.parallel(d_pca_dynamicnorms, fm='minres', fa='fa')
-pca1 <- fa(d_pca_dynamicnorms, nfactors = 1, rotate = "Varimax", fm="minres") 
-print(pca1)
-print(pca1$loadings,cutoff = 0.3)
+ggscatter(d_accept, x = "sr_24_past_contact", y = "sr_25_future_contact", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Test x", ylab = "Test Y")
+
+shapiro.test(d_accept$sr_24_past_contact)
+ggqqplot(d_accept$sr_24_past_contact, ylab = "past contact")
+
+shapiro.test(d_accept$sr_25_future_contact)
+ggqqplot(d_accept$sr_25_future_contact, ylab = "future contact")
 ```
 
-#### Dynamic Norms - Cronbach Alpha
-```{r}
-psych::alpha(d_pca_dynamicnorms, use ="pairwise", na.rm = TRUE) 
+```{r, eval=T, echo=F, warning=F}
+res <- cor.test(d_accept$sr_24_past_contact,d_accept$sr_25_future_contact, method = "spearman")
+print(res)
 ```
+Correlation test of the two dynamic norms items shows strong positive correlation, with Spearman's rho of `r res$estimate` and p-value of `r res$p.value`.
 
-### Descriptive Norms
-**"com"** in the rmd file?? Don't know what results that refers to 
-```{r}
-d_pca_descriptivenorms <- d_accept %>% 
-  select(
+$$\\[.05in]$$
+
+### Descriptive Norms (contact)
+*"To what extent do you think that the following people ARE CONTACTING (writing letters, emailing, or calling) their elected representatives in Congress to urge action on reducing climate change?"*
+
+Three factor solution (70% cumulative variance (hereafter: cv))   
+1. 1-item variable: Parents   
+2. 2-item composite variable: Spouse, Children   
+3. Multi-item composite variable: Non-immediate family
+
+```{r, eval=T, echo=F}
+d_pca_descriptivecontactnorms <- d_accept %>% 
+  dplyr::select(
     matches("sr_19a"),
     matches("sr_19b"),
     matches("sr_19c"),
@@ -87,7 +108,50 @@ d_pca_descriptivenorms <- d_accept %>%
     matches("sr_19e"),
     matches("sr_19f"),
     matches("sr_19g"),
-    matches("sr_19h"),
+    matches("sr_19h"))
+    
+fa.parallel(d_pca_descriptivecontactnorms, fm='minres', fa='fa')
+pca1 <- fa(d_pca_descriptivecontactnorms, nfactors = 4, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+#### Descriptive Norms (contact) - 2nd factor (Spouse & Children) - Correlation
+```{r, eval=T, echo=F}
+res <- cor.test(d_accept$sr_19b_contacting_officials_spouse,d_accept$sr_19c_contacting_officials_children, method = "spearman", exact=FALSE)
+print(res)
+```
+Correlation test of the two descriptive norms items for Spouse and Children, showing moderate positive correlation. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
+
+#### Descriptive Norms (contact) - 3rd factor (Non-immediate family) - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_descriptivecontactnormsnonfamily <- d_accept %>% 
+  dplyr::select(
+    matches("sr_19d"),
+    matches("sr_19e"),
+    matches("sr_19f"),
+    matches("sr_19g"),
+    matches("sr_19h"))
+
+psych::alpha(d_pca_descriptivecontactnormsnonfamily, use ="pairwise", na.rm = TRUE) 
+```
+
+
+
+$$\\[.05in]$$
+
+### Descriptive Norms (role models)
+*"How likely are you to consider each of these groups as behavioral role models?"*
+
+Scree plot suggests four factors (78% cumulative var), but three factor solution makes the most sense.   
+Three factor solution (71% cv):   
+1. 1-item variable: Parents   
+2. 2-item composite variable: Spouse, Children   
+3. Multi-item composite variable: Non-immediate family
+
+```{r eval=TRUE, echo=F}
+d_pca_descriptiverolemodelnorms <- d_accept %>% 
+  dplyr::select(
     matches("sr_20a"),
     matches("sr_20b"),
     matches("sr_20c"),
@@ -97,23 +161,46 @@ d_pca_descriptivenorms <- d_accept %>%
     matches("sr_20g"),
     matches("sr_20h"))
     
-fa.parallel(d_pca_descriptivenorms, fm='minres', fa='fa')
-pca1 <- fa(d_pca_descriptivenorms, nfactors = 5, rotate = "Varimax", fm="minres") 
+fa.parallel(d_pca_descriptiverolemodelnorms, fm='minres', fa='fa')
+pca1 <- fa(d_pca_descriptiverolemodelnorms, nfactors = 4, rotate = "Varimax", fm="minres") 
 print(pca1)
-print(pca1$loadings,cutoff = 0.3)
+print(pca1$loadings,cutoff = 0.3) 
 ```
 
-#### Descriptive Norms - Cronbach Alpha
-```{r}
-psych::alpha(d_pca_descriptivenorms, use ="pairwise", na.rm = TRUE) 
+#### Descriptive Norms (role models) - 2nd factor (Spouse & Children) - Correlation
+```{r, eval=T, echo=F}
+res <- cor.test(d_accept$sr_20b_rolemodels_spouse,d_accept$sr_20c_rolemodels_children, method = "spearman", exact=FALSE)
+print(res)
+```
+Correlation test of the two descriptive norms items for Spouse and Children, showing moderate positive correlation. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
+
+#### Descriptive Norms (role models) - 3rd factor (Non-immediate family) - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_descriptiverolemodelnormsnonfamily <- d_accept %>% 
+  dplyr::select(
+    matches("sr_20d"),
+    matches("sr_20e"),
+    matches("sr_20f"),
+    matches("sr_20g"),
+    matches("sr_20h"))
+
+psych::alpha(d_pca_descriptiverolemodelnormsnonfamily, use ="pairwise", na.rm = TRUE) 
 ```
 
+$$\\[.05in]$$
 
-### Injunctive Norms
-text text text
-```{r}
-d_pca_injunctivenorms <- d_accept %>% 
-  select(
+### Injunctive Norms (contact) 
+*"To what extent do you think that the following people EXPECT YOU to contact (writing letters, emailing, or calling) your elected representatives to urge action on reducing climate change?"*
+
+Scree plot suggests four factors (78% cv) but three (73% cv) makes the most sense.     
+Three-factor solution:   
+1. 1-item variable: Parents   
+2. 2-item composite variable: Spouse, Children   
+3. Multi-item composite variable: Non-immediate family
+
+```{r, eval=T, echo=F}
+d_pca_injunctivecontactnorms <- d_accept %>% 
+  dplyr::select(
     matches("sr_22a"),
     matches("sr_22b"),
     matches("sr_22c"),
@@ -121,7 +208,45 @@ d_pca_injunctivenorms <- d_accept %>%
     matches("sr_22e"),
     matches("sr_22f"),
     matches("sr_22g"),
-    matches("sr_22h"),
+    matches("sr_22h"))
+
+fa.parallel(d_pca_injunctivecontactnorms, fm='minres', fa='fa')
+pca1 <- fa(d_pca_injunctivecontactnorms, nfactors = 4, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+#### Injunctive Norms (contact) - 2nd factor (Spouse & Children) - Correlation
+```{r, eval=T, echo=F}
+res <- cor.test(d_accept$sr_22b_expect_contact_spouse,d_accept$sr_22c_expect_contact_children, method = "spearman", exact=FALSE)
+print(res)
+```
+Correlation test of the two descriptive norms items for Spouse and Children, showing moderate positive correlation. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
+
+#### Injunctive Norms (contact) - 3rd factor (Non-family) - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_injunctivecontactnormsnonfamily <- d_accept %>% 
+  dplyr::select(
+    matches("sr_22d"),
+    matches("sr_22e"),
+    matches("sr_22f"),
+    matches("sr_22g"),
+    matches("sr_22h"))
+
+psych::alpha(d_pca_injunctivecontactnormsnonfamily, use ="pairwise", na.rm = TRUE) 
+```
+$$\\[.05in]$$
+
+### Injunctive Norms (compliance)
+*"How motivated are you to comply with the expectations of each of these people?"*
+
+Two factor solution (70% cv)    
+1. Multi-item composite variable: Parents, Spouse, Children   
+2. Multi-item composite variable: Otherfam, Friends, Cowork, Recpartners, Faith
+
+```{r, eval=T, echo=F}
+d_pca_injunctivecompliance <- d_accept %>% 
+  dplyr::select(
     matches("sr_23a"),
     matches("sr_23b"),
     matches("sr_23c"),
@@ -131,23 +256,51 @@ d_pca_injunctivenorms <- d_accept %>%
     matches("sr_23g"),
     matches("sr_23h"))
 
-fa.parallel(d_pca_injunctivenorms, fm='minres', fa='fa')
-pca1 <- fa(d_pca_injunctivenorms, nfactors = 5, rotate = "Varimax", fm="minres") 
+fa.parallel(d_pca_injunctivecompliance, fm='minres', fa='fa')
+pca1 <- fa(d_pca_injunctivecompliance, nfactors = 2, rotate = "Varimax", fm="minres") 
 print(pca1)
 print(pca1$loadings,cutoff = 0.3)
+
 ```
 
-#### Injunctive Norms - Cronbach Alpha
-```{r}
-psych::alpha(d_pca_injunctivenorms, use ="pairwise", na.rm = TRUE) 
+#### Injunctive Norms (compliance) - 1st factor (Immediate Family) - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_injunctivecompliancefamily <- d_accept %>% 
+  dplyr::select(
+    matches("sr_23a"),
+    matches("sr_23b"),
+    matches("sr_23c"))
+
+psych::alpha(d_pca_injunctivecompliancefamily, use ="pairwise", na.rm = TRUE) 
 ```
 
+#### Injunctive Norms (compliance) - 2nd factor (Non-family) - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_injunctivecompliancenonfamily <- d_accept %>% 
+  dplyr::select(
+    matches("sr_23d"),
+    matches("sr_23e"),
+    matches("sr_23f"),
+    matches("sr_23g"),
+    matches("sr_23h"))
+
+psych::alpha(d_pca_injunctivecompliancenonfamily, use ="pairwise", na.rm = TRUE) 
+```
+
+$$\\[.05in]$$
 
 ### CIM - Benefits
-They appear to load well on one factor but I expanded the analysis to 2 factors to hopefully show that fit. 
-```{r}
+*"How often do you hear ____ talk about the importance of reducing climate change?"*   
+*[your friends, family, and coworkers]*   
+*[public figures whom you respect]*   
+*[about the importance of reducing climate change in the media? (TV, movies, radio, newspapers/news websites, magazines, etc.)]*
+
+One-factor solution:   
+1. Multi-item composite variable: F/Fam/Cowork, Public Figures, Media
+
+```{r, eval=T, echo=F}
 d_pca_CIMbenefits <- d_accept %>% 
-  select(
+  dplyr::select(
     matches("sr_16"),
     matches("sr_17"),
     matches("sr_18"))
@@ -159,20 +312,35 @@ print(pca1$loadings,cutoff = 0.3)
 ```
 
 #### CIM - Benefits - Cronbach Alpha
-```{r}
+```{r, eval=T, echo=F}
 psych::alpha(d_pca_CIMbenefits, use ="pairwise", na.rm = TRUE) 
 ```
 
-### CIM - Costs
-**Getting errors with the PCA code. IN PROGRESS**
-**Have not yet set up new column for sr_57 question about # of children. Need to change it to two options: Dependents (0-n children under 17years old), Older Children (0-n children 18+ years old)**
+$$\\[.05in]$$
 
-```{r eval=F, include=F}
+### CIM - Costs
+**It's not valid to do PCA on categorical variables. I either need to look at other methods to reduce complexity across these items in the CIM Costs group, or keep them as is.**
+
+```{r, eval=F, include=F}
+
+# Number of records w/ dependents, adult children, and no children
+d_accept %>% 
+  count(sr_57i_dependents >= 1)
+
+d_accept %>% 
+  count(sr_57j_adultchildren >= 1)
+
+d_accept %>% 
+  count(sr_57k_nochildren == 0)
+```
+
+```{r, eval=F, include=F}
 d_pca_CIMcosts <- d_accept %>% 
-  select(-"age_range") %>%
-  select(
+  dplyr::select(-"age_range") %>%
+  dplyr::select(
     starts_with("age"),
-    starts_with("sr_57"),
+    matches("sr_57i_dependents"),
+    matches("sr_57j_adultchildren"),
     matches("gender"),
     matches("sr_61"),
     matches("sr_71_employment_status"),
@@ -184,7 +352,6 @@ d_pca_CIMcosts <- d_accept %>%
     matches("sr_74_5_race_east_asian"),
     matches("sr_74_6_race_middle_eastern"),
     matches("sr_74_7_race_south_asian"),
-    matches("sr_74_8_race_no_answer"),
     matches("sr_78_political_affiliation"),
     matches("sr_79"))
 
@@ -195,16 +362,29 @@ print(pca1$loadings,cutoff = 0.3)
 ```
 
 #### CIM - Costs - Cronbach Alpha
-```{r}
+```{r, eval=F, include=F}
 psych::alpha(d_pca_CIMcosts, use ="pairwise", na.rm = TRUE) 
 ```
 
+$$\\[.05in]$$
+
 ### CIM - Perceived Risk
-```{r}
+*"How important is each of the following issues to you today?"*   
+*"How important is the issue of climate change to you personally?"*   
+*"How worried are you about climate change?"*   
+*"How much do you think climate change will harm you personally?"*   
+*"How much do you think climate change will harm future generations of people?"*
+
+NOTE - removing #7 for now until I understand how to properly account for it. 
+
+Two-factor solution   
+1. Multi-item composite variable: CC importance as an issue, CC personal importance, CC worry, belief of personal harm from CC    
+2. 1-item variable: belief of harm to future generations from CC
+
+```{r, eval=T, echo=F}
 d_pca_CIMperceivedrisk <- d_accept %>% 
-  select(
+  dplyr::select(
     matches("sr_3b_importance_climatechange"),
-    matches("sr_7_believe_about_climate_change"),
     matches("sr_8_importance_personally"),
     matches("sr_9_worried"),
     matches("sr_10_harm_you_personally"),
@@ -216,16 +396,33 @@ print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
 
-#### CIM - Perceived Risk - Cronbach Alpha
-```{r}
-psych::alpha(d_pca_CIMperceivedrisk, use ="pairwise", na.rm = TRUE) 
+#### CIM - Perceived Risk - 1st factor (Personal) - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_CIMperceivedriskpersonal <- d_accept %>% 
+  dplyr::select(
+    matches("sr_3b_importance_climatechange"),
+    matches("sr_8_importance_personally"),
+    matches("sr_9_worried"),
+    matches("sr_10_harm_you_personally"))
+
+psych::alpha(d_pca_CIMperceivedriskpersonal, use ="pairwise", na.rm = TRUE) 
 ```
 
+$$\\[.05in]$$
+
 ### Efficacy
-They appear to load well on one factor but I expanded the analysis to 2 factors to hopefully show that fit. 
-```{r}
+*"Below is a list of actions that individuals could take to reduce climate change. If YOU took these actions, how effective would each be for reducing climate change?"*   
+*"Below are some public and private organizations who make decisions that have an impact on climate change. In general, how COMPETENT is each in addressing climate change?"*   
+*"In general, how RESPONSIVE is each in addressing climate change?"*   
+*"How much do you agree that each type of organization is generally IN A POSITION TO EFFECTIVELY reduce climate change?"*   
+Three-factor solution:   
+1. Multi-item composite variable: All types (fed, state, business, ngo, elected officials) are in a position to effect change   
+2. Multi-item composite variable: The competency and responsiveness of fed, state, and business   
+3. 2-item composite variable: The competency and responsiveness of ngo only
+
+```{r, eval=T, echo=F}
 d_pca_efficacy <- d_accept %>% 
-  select(
+  dplyr::select(
     matches("sr_21a"),
     matches("sr_27[a-d]"),
     matches("sr_28[a-d]"),
@@ -237,15 +434,46 @@ print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
 
-#### Efficacy - Cronbach Alpha
-```{r}
-psych::alpha(d_pca_efficacy, use ="pairwise", na.rm = TRUE) 
+#### Efficacy - 1st Factor (All types' ability to effect change) - Cronbach Alpha 
+```{r, eval=T, echo=F}
+d_pca_efficacyeffectchange <- d_accept %>% 
+  dplyr::select(
+    matches("sr_21a"),
+    matches("sr_29[a-d]"))
+
+psych::alpha(d_pca_efficacyeffectchange, use ="pairwise", na.rm = TRUE) 
 ```
 
+#### Efficacy - 2nd Factor (Competency & Responsiveness of Fed, State, and Business) - Cronbach Alpha 
+```{r, eval=T, echo=F}
+d_pca_efficacycompetencyresponsive <- d_accept %>% 
+  dplyr::select(
+    matches("sr_27[a-c]"),
+    matches("sr_28[a-c]"))
+
+psych::alpha(d_pca_efficacycompetencyresponsive, use ="pairwise", na.rm = TRUE) 
+```
+
+#### Efficacy - 3rd Factor (Competency & Responsiveness of NGO) - Correlation 
+```{r, eval=T, echo=F}
+res <- cor.test(d_accept$sr_27d_competent_ngo,d_accept$sr_28d_responsive_ngo, method = "spearman", exact=FALSE)
+print(res)
+```
+Correlation test of the competency and responsiveness scores for NGOs shows moderate positive correlation. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
+
+$$\\[.05in]$$
+
 ### TPB Behavioral Attitude
-```{r}
+*"For me, contacting (writing letters, emailing, phoning my elected representatives in Congress to urge action on climate change on a regular basis during the next year would be …"*
+
+Three-factor solution:   
+1. Multi-item composite variable: cool/uncool, admirable/shameful, good/bad, exciting/boring   
+2. Multi-item composite variable: useful/useless, pleasant/intimidating, sensible/foolish   
+3. 1-item variable: easy/awkward   
+
+```{r, eval=T, echo=F}
 d_pca_behavioralattitude <- d_accept %>% 
-  select(
+  dplyr::select(
     matches("sr_32"),
     matches("sr_33"),
     matches("sr_34"),
@@ -261,47 +489,39 @@ print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
 
-#### TPB Behavioral Attitude - Cronbach Alpha
-Alpha of .64 with 95% CI .61-.68
+#### TPB Behavioral Attitude - 1st factor - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_behavioralattitude1 <- d_accept %>% 
+  dplyr::select(
+    matches("sr_34"),
+    matches("sr_38"),
+    matches("sr_36"),
+    matches("sr_39"))
 
-```{r}
-psych::alpha(d_pca_behavioralattitude, use ="pairwise", na.rm = TRUE) 
+psych::alpha(d_pca_behavioralattitude1, use ="pairwise", na.rm = TRUE) 
 ```
+
+#### TPB Behavioral Attitude - 2nd factor - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_behavioralattitude2 <- d_accept %>% 
+  dplyr::select(
+    matches("sr_32"),
+    matches("sr_33"),
+    matches("sr_37"))
+
+psych::alpha(d_pca_behavioralattitude2, use ="pairwise", na.rm = TRUE) 
+```
+
+$$\\[.05in]$$
 
 ### Perceived Behavioral Control
-Both items clearly load on one factor
-```{r}
-d_pca_perceivedcontrol <- d_accept %>% 
-  select(
-    matches("sr_30"),
-    matches("sr_31"))
-
-fa.parallel(d_pca_perceivedcontrol, fm='minres', fa='fa')
-pca1 <- fa(d_pca_perceivedcontrol, nfactors = 1, rotate = "Varimax", fm="minres") 
-print(pca1)
-print(pca1$loadings,cutoff = 0.3)
+```{r, eval=T, echo=F, warning=F}
+res <- cor.test(d_accept$sr_30_easy_to_call,d_accept$sr_31_able_to_call, method = "spearman")
+print(res)
 ```
+The two measures of perceived behavioral control show a moderate positive relationship, just barely under the .65 rule of thumb. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
 
-#### Perceived Behavioral Control - Cronbach Alpha
-```{r}
-psych::alpha(d_pca_perceivedcontrol, use ="pairwise", na.rm = TRUE) 
-```
+$$\\[.05in]$$
 
 ### Worldviews
-```{r}
-d_pca_worldviews <- d_accept %>% 
-  select(
-    matches("sr_41[a-f]"))
-
-fa.parallel(d_pca_worldviews, fm='minres', fa='fa')
-pca1 <- fa(d_pca_worldviews, nfactors = 2, rotate = "Varimax", fm="minres") 
-print(pca1)
-print(pca1$loadings,cutoff = 0.3)
-```
-
-#### Worldviews - Cronbach Alpha
-Alpha .62 with 95% CI of .58-.65
-
-```{r}
-psych::alpha(d_pca_worldviews, use ="pairwise", na.rm = TRUE) 
-```
+We decided these will be kept as-is.
