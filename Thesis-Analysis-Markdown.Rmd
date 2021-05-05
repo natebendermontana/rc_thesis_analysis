@@ -12,6 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, eval=TRUE, include=FALSE}
 setwd("/Users/natebender/Desktop/Repo/RCthesisanalysis/")
 # install.packages("ltm")
+# install.packages("fBasics")
+# install.packages("ggcorrplot")
 library(psych)
 library(tidyverse)
 library(dplyr)
@@ -20,6 +22,9 @@ library(ggfortify)
 library(GPArotation)
 library(ltm)
 library(ggpubr)
+library(arsenal)
+library(fBasics)
+library(ggcorrplot)
 ```
 
 ```{r, include=FALSE}
@@ -27,18 +32,18 @@ library(ggpubr)
 d <- read.csv("/Users/natebender/Desktop/Graduate_School/Thesis/All-for-1.5/Analysis/dyn_national_20200828 - results-20200930-082116_NEW.csv")
 
 d_accept <- d %>% 
-  filter(reject==0)
+  dplyr::filter(reject == 0)
 ```
 
 ```{r, eval=TRUE, include=FALSE}
 # EDA ####
 # Number of respondents / rejects
 respondents <- d %>% 
-  filter(reject==0) %>% 
+  dplyr::filter(reject==0) %>% 
   count(respondent_id)
 
 rejected <- d %>% 
-  filter(reject==1) %>% 
+  dplyr::filter(reject==1) %>% 
   count(respondent_id)
 ```
 
@@ -59,6 +64,31 @@ d_accept %>%
             noanswer = sum(gender==4, na.rm = TRUE),
             noanswerpercent = sum(gender==4, na.rm = TRUE)/sum(gender, na.rm =TRUE),
             total = sum((gender==1)+(gender==2)+(gender==3)+(gender==4), na.rm = TRUE))
+```
+
+```{r, eval=F, include=F, echo=F}
+# Early viz and desc stats tables...in progress
+for.stats <- d_accept %>% 
+  dplyr::select(
+    matches("sr_3[a-o]"))
+
+basicStats(for.stats)
+
+
+ggplot(data = d_accept, aes(x=age)) + geom_bar()
+
+ggplot(data = d_accept, aes(x=gender)) + geom_bar()
+
+ggplot(data = for.stats, aes(x=sr_3a_importance_abortion)) + geom_bar()
+
+
+cormatdesccontactnorms <- d_pca_descriptivecontactnorms %>%
+  cor(., use = "pairwise.complete.obs")
+
+ggcorrplot(cormatdesccontactnorms, # correlation matrix
+           type = "lower", # print the lower part of the correlation matrix
+           hc.order = TRUE, # hierarchical clustering of correlations
+           lab = TRUE) # add correlation values as labels
 ```
 
 # Principal Components Analysis
@@ -135,8 +165,6 @@ d_pca_descriptivecontactnormsnonfamily <- d_accept %>%
 
 psych::alpha(d_pca_descriptivecontactnormsnonfamily, use ="pairwise", na.rm = TRUE) 
 ```
-
-
 
 $$\\[.05in]$$
 
@@ -319,7 +347,19 @@ psych::alpha(d_pca_CIMbenefits, use ="pairwise", na.rm = TRUE)
 $$\\[.05in]$$
 
 ### CIM - Costs
-**It's not valid to do PCA on categorical variables. I either need to look at other methods to reduce complexity across these items in the CIM Costs group, or keep them as is.**
+**It's not valid to do PCA on categorical variables, right? I either need to look at other methods to reduce complexity across these items in the CIM Costs group, or keep them as is.**   
+
+The variables included in this CIM Costs category currently are:   
+1. Age   
+2. Gender   
+3. # of dependents (<18 years old)   
+4. # of adult children (>=18 years old)   
+5. Race   
+6. Level of education completed   
+7. Employment status   
+8. Total 2019 annual income   
+9. Political affiliation   
+10. Political leaning   
 
 ```{r, eval=F, include=F}
 
@@ -339,24 +379,24 @@ d_pca_CIMcosts <- d_accept %>%
   dplyr::select(-"age_range") %>%
   dplyr::select(
     starts_with("age"),
-    matches("sr_57i_dependents"),
-    matches("sr_57j_adultchildren"),
     matches("gender"),
-    matches("sr_61"),
-    matches("sr_71_employment_status"),
-    matches("sr_72"),
+    matches("sr_57i_dependents"),
+    matches("sr_57j_adultchildren")    
     matches("sr_74_1_race_white"),
     matches("sr_74_2_race_black"),
     matches("sr_74_3_race_hispanic"),
     matches("sr_74_1_race_native_american"),
     matches("sr_74_5_race_east_asian"),
     matches("sr_74_6_race_middle_eastern"),
-    matches("sr_74_7_race_south_asian"),
+    matches("sr_74_7_race_south_asian")
+    matches("sr_61"),
+    matches("sr_71_employment_status"),
+    matches("sr_72"),
     matches("sr_78_political_affiliation"),
     matches("sr_79"))
 
 fa.parallel(d_pca_CIMcosts, fm='minres', fa='fa')
-pca1 <- fa(d_pca_CIMcosts, nfactors = 2, rotate = "Varimax", fm="minres") 
+pca1 <- fa(d_pca_CIMcosts, nfactors = 1, rotate = "Varimax", fm="minres") 
 print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
@@ -414,7 +454,8 @@ $$\\[.05in]$$
 *"Below is a list of actions that individuals could take to reduce climate change. If YOU took these actions, how effective would each be for reducing climate change?"*   
 *"Below are some public and private organizations who make decisions that have an impact on climate change. In general, how COMPETENT is each in addressing climate change?"*   
 *"In general, how RESPONSIVE is each in addressing climate change?"*   
-*"How much do you agree that each type of organization is generally IN A POSITION TO EFFECTIVELY reduce climate change?"*   
+*"How much do you agree that each type of organization is generally IN A POSITION TO EFFECTIVELY reduce climate change?"* 
+
 Three-factor solution:   
 1. Multi-item composite variable: All types (fed, state, business, ngo, elected officials) are in a position to effect change   
 2. Multi-item composite variable: The competency and responsiveness of fed, state, and business   
