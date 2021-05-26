@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+### Packages / Libraries
 ```{r, eval=TRUE, include=FALSE}
 setwd("/Users/natebender/Desktop/Repo/RCthesisanalysis/")
 # install.packages("ltm")
@@ -22,9 +23,9 @@ library(ggfortify)
 library(GPArotation)
 library(ltm)
 library(ggpubr)
-library(arsenal)
 library(fBasics)
 library(ggcorrplot)
+library(car)
 ```
 
 ```{r, include=FALSE}
@@ -95,7 +96,11 @@ ggcorrplot(cormatdesccontactnorms, # correlation matrix
 $$\\[.05in]$$
 
 ### Dynamic Norms
-*"Do you think that over the PAST/NEXT 12 months the percentage of adults in the United States who contacted elected officials to urge them to take action to reduce global warming is..."*
+*"Do you think that over the PAST/NEXT 12 months the percentage of adults in the United States who contacted elected officials to urge them to take action to reduce global warming is..."*   
+
+One factor solution:   
+1. Two-item factor consisting of the two dynamic norms questions (changes in the number of ppl contacting reps in the past and future)
+
 ```{r eval=F, include=F}
 # Visualize variables
 # *** Need to address errors in this visualization code ***
@@ -115,6 +120,12 @@ ggqqplot(d_accept$sr_25_future_contact, ylab = "future contact")
 ```{r, eval=T, echo=F, warning=F}
 res <- cor.test(d_accept$sr_24_past_contact,d_accept$sr_25_future_contact, method = "spearman")
 print(res)
+
+mean(d_accept$sr_24_past_contact, na.rm=TRUE)
+sd(d_accept$sr_24_past_contact, na.rm=TRUE)
+
+mean(d_accept$sr_25_future_contact, na.rm=TRUE)
+sd(d_accept$sr_25_future_contact, na.rm=TRUE)
 ```
 Correlation test of the two dynamic norms items shows strong positive correlation, with Spearman's rho of `r res$estimate` and p-value of `r res$p.value`.
 
@@ -146,10 +157,25 @@ print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
 
-#### Descriptive Norms (contact) - 2nd factor (Spouse & Children) - Correlation
+#### Descriptive Norms (contact) - 1st factor (Parents) - desc stats
+```{r, eval=T, echo=F}
+mean(d_accept$sr_19a_contacting_officials__parents, na.rm=TRUE)
+sd(d_accept$sr_19a_contacting_officials__parents, na.rm=TRUE)
+
+summary(d_pca_descriptivecontactnorms)
+sapply(d_pca_descriptivecontactnorms, sd, na.rm=TRUE)
+```
+
+#### Descriptive Norms (contact) - 2nd factor (Spouse & Children) - Correlation & desc stats
 ```{r, eval=T, echo=F}
 res <- cor.test(d_accept$sr_19b_contacting_officials_spouse,d_accept$sr_19c_contacting_officials_children, method = "spearman", exact=FALSE)
 print(res)
+
+mean(d_accept$sr_19b_contacting_officials_spouse, na.rm=TRUE)
+sd(d_accept$sr_19b_contacting_officials_spouse, na.rm=TRUE)
+
+mean(d_accept$sr_19c_contacting_officials_children, na.rm=TRUE)
+sd(d_accept$sr_19c_contacting_officials_children, na.rm=TRUE)
 ```
 Correlation test of the two descriptive norms items for Spouse and Children, showing moderate positive correlation. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
 
@@ -164,6 +190,8 @@ d_pca_descriptivecontactnormsnonfamily <- d_accept %>%
     matches("sr_19h"))
 
 psych::alpha(d_pca_descriptivecontactnormsnonfamily, use ="pairwise", na.rm = TRUE) 
+
+
 ```
 
 $$\\[.05in]$$
@@ -195,10 +223,23 @@ print(pca1)
 print(pca1$loadings,cutoff = 0.3) 
 ```
 
+#### Descriptive Norms (role models) - 1st factor (Parents) - Descriptive stats
+```{r, eval=T, echo=F}
+mean(d_accept$sr_20a_rolemodels_parents, na.rm=TRUE)
+sd(d_accept$sr_20a_rolemodels_parents, na.rm=TRUE)
+```
+
+
 #### Descriptive Norms (role models) - 2nd factor (Spouse & Children) - Correlation
 ```{r, eval=T, echo=F}
 res <- cor.test(d_accept$sr_20b_rolemodels_spouse,d_accept$sr_20c_rolemodels_children, method = "spearman", exact=FALSE)
 print(res)
+
+mean(d_accept$sr_20b_rolemodels_spouse, na.rm=TRUE)
+sd(d_accept$sr_20b_rolemodels_spouse, na.rm=TRUE)
+
+mean(d_accept$sr_20c_rolemodels_children, na.rm=TRUE)
+sd(d_accept$sr_20c_rolemodels_children, na.rm=TRUE)
 ```
 Correlation test of the two descriptive norms items for Spouse and Children, showing moderate positive correlation. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
 
@@ -213,6 +254,9 @@ d_pca_descriptiverolemodelnormsnonfamily <- d_accept %>%
     matches("sr_20h"))
 
 psych::alpha(d_pca_descriptiverolemodelnormsnonfamily, use ="pairwise", na.rm = TRUE) 
+
+summary(d_pca_descriptivecontactnormsnonfamily)
+sapply(d_pca_descriptivecontactnormsnonfamily, sd, na.rm=TRUE)
 ```
 
 $$\\[.05in]$$
@@ -242,6 +286,9 @@ fa.parallel(d_pca_injunctivecontactnorms, fm='minres', fa='fa')
 pca1 <- fa(d_pca_injunctivecontactnorms, nfactors = 4, rotate = "Varimax", fm="minres") 
 print(pca1)
 print(pca1$loadings,cutoff = 0.3)
+
+summary(d_pca_injunctivecontactnorms)
+sapply(d_pca_injunctivecontactnorms, sd, na.rm=TRUE)
 ```
 
 #### Injunctive Norms (contact) - 2nd factor (Spouse & Children) - Correlation
@@ -289,6 +336,8 @@ pca1 <- fa(d_pca_injunctivecompliance, nfactors = 2, rotate = "Varimax", fm="min
 print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 
+summary(d_pca_injunctivecompliance)
+sapply(d_pca_injunctivecompliance, sd, na.rm=TRUE)
 ```
 
 #### Injunctive Norms (compliance) - 1st factor (Immediate Family) - Cronbach Alpha
@@ -334,7 +383,7 @@ d_pca_CIMbenefits <- d_accept %>%
     matches("sr_18"))
 
 fa.parallel(d_pca_CIMbenefits, fm='minres', fa='fa')
-pca1 <- fa(d_pca_CIMbenefits, nfactors = 2, rotate = "Varimax", fm="minres") 
+pca1 <- fa(d_pca_CIMbenefits, nfactors = 1, rotate = "Varimax", fm="minres") 
 print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
@@ -342,68 +391,6 @@ print(pca1$loadings,cutoff = 0.3)
 #### CIM - Benefits - Cronbach Alpha
 ```{r, eval=T, echo=F}
 psych::alpha(d_pca_CIMbenefits, use ="pairwise", na.rm = TRUE) 
-```
-
-$$\\[.05in]$$
-
-### CIM - Costs
-**It's not valid to do PCA on categorical variables, right? I either need to look at other methods to reduce complexity across these items in the CIM Costs group, or keep them as is.**   
-
-The variables included in this CIM Costs category currently are:   
-1. Age   
-2. Gender   
-3. # of dependents (<18 years old)   
-4. # of adult children (>=18 years old)   
-5. Race   
-6. Level of education completed   
-7. Employment status   
-8. Total 2019 annual income   
-9. Political affiliation   
-10. Political leaning   
-
-```{r, eval=F, include=F}
-
-# Number of records w/ dependents, adult children, and no children
-d_accept %>% 
-  count(sr_57i_dependents >= 1)
-
-d_accept %>% 
-  count(sr_57j_adultchildren >= 1)
-
-d_accept %>% 
-  count(sr_57k_nochildren == 0)
-```
-
-```{r, eval=F, include=F}
-d_pca_CIMcosts <- d_accept %>% 
-  dplyr::select(-"age_range") %>%
-  dplyr::select(
-    starts_with("age"),
-    matches("gender"),
-    matches("sr_57i_dependents"),
-    matches("sr_57j_adultchildren")    
-    matches("sr_74_1_race_white"),
-    matches("sr_74_2_race_black"),
-    matches("sr_74_3_race_hispanic"),
-    matches("sr_74_1_race_native_american"),
-    matches("sr_74_5_race_east_asian"),
-    matches("sr_74_6_race_middle_eastern"),
-    matches("sr_74_7_race_south_asian")
-    matches("sr_61"),
-    matches("sr_71_employment_status"),
-    matches("sr_72"),
-    matches("sr_78_political_affiliation"),
-    matches("sr_79"))
-
-fa.parallel(d_pca_CIMcosts, fm='minres', fa='fa')
-pca1 <- fa(d_pca_CIMcosts, nfactors = 1, rotate = "Varimax", fm="minres") 
-print(pca1)
-print(pca1$loadings,cutoff = 0.3)
-```
-
-#### CIM - Costs - Cronbach Alpha
-```{r, eval=F, include=F}
-psych::alpha(d_pca_CIMcosts, use ="pairwise", na.rm = TRUE) 
 ```
 
 $$\\[.05in]$$
@@ -417,9 +404,10 @@ $$\\[.05in]$$
 
 NOTE - removing #7 for now until I understand how to properly account for it. 
 
-Two-factor solution   
+Three-factor solution   
 1. Multi-item composite variable: CC importance as an issue, CC personal importance, CC worry, belief of personal harm from CC    
-2. 1-item variable: belief of harm to future generations from CC
+2. 1-item variable: anthropocentric CC belief
+3. 1-item variable: belief of harm to future generations from CC
 
 ```{r, eval=T, echo=F}
 d_pca_CIMperceivedrisk <- d_accept %>% 
@@ -448,6 +436,16 @@ d_pca_CIMperceivedriskpersonal <- d_accept %>%
 psych::alpha(d_pca_CIMperceivedriskpersonal, use ="pairwise", na.rm = TRUE) 
 ```
 
+#### CIM - Perceived Risk - Descriptive stats on single-item variables
+```{r, eval=T, echo=T}
+
+mean(d_accept$sr_11_harm_future_generations, na.rm=TRUE)
+sd(d_accept$sr_11_harm_future_generations, na.rm=TRUE)
+
+mean(d_accept$sr_7_believe_about_climate_change, na.rm=TRUE)
+sd(d_accept$sr_7_believe_about_climate_change, na.rm=TRUE)
+
+```
 $$\\[.05in]$$
 
 ### Efficacy
@@ -457,50 +455,61 @@ $$\\[.05in]$$
 *"How much do you agree that each type of organization is generally IN A POSITION TO EFFECTIVELY reduce climate change?"* 
 
 Three-factor solution:   
-1. Multi-item composite variable: All types (fed, state, business, ngo, elected officials) are in a position to effect change   
-2. Multi-item composite variable: The competency and responsiveness of fed, state, and business   
-3. 2-item composite variable: The competency and responsiveness of ngo only
+1. 1-item variable: 21a: Is contacting elected reps an effective action?   
+2. Multi-item composite variable: All types (fed, state, business, ngo) are in a position to effect change   
+3. Multi-item composite variable: The competency and responsiveness of fed, state, and business   
+4. 2-item composite variable: The competency and responsiveness of ngo only
 
 ```{r, eval=T, echo=F}
-d_pca_efficacy <- d_accept %>% 
+d_pca_efficacysecond <- d_accept %>% 
   dplyr::select(
-    matches("sr_21a"),
     matches("sr_27[a-d]"),
     matches("sr_28[a-d]"),
     matches("sr_29[a-d]"))
 
-fa.parallel(d_pca_efficacy, fm='minres', fa='fa')
-pca1 <- fa(d_pca_efficacy, nfactors = 3, rotate = "Varimax", fm="minres") 
+fa.parallel(d_pca_efficacysecond, fm='minres', fa='fa')
+pca1 <- fa(d_pca_efficacysecond, nfactors = 3, rotate = "Varimax", fm="minres") 
 print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
 
-#### Efficacy - 1st Factor (All types' ability to effect change) - Cronbach Alpha 
+#### Efficacy - 1st variable (contacting elected officials an effective action?)
 ```{r, eval=T, echo=F}
-d_pca_efficacyeffectchange <- d_accept %>% 
-  dplyr::select(
-    matches("sr_21a"),
-    matches("sr_29[a-d]"))
-
-psych::alpha(d_pca_efficacyeffectchange, use ="pairwise", na.rm = TRUE) 
+mean(d_accept$sr_21a_effective_actions_contacting_officials, na.rm=TRUE)
+sd(d_accept$sr_21a_effective_actions_contacting_officials, na.rm=TRUE)
 ```
 
-#### Efficacy - 2nd Factor (Competency & Responsiveness of Fed, State, and Business) - Cronbach Alpha 
+#### Efficacy - 2nd Factor (All types' ability to effect change) - Cronbach Alpha 
 ```{r, eval=T, echo=F}
-d_pca_efficacycompetencyresponsive <- d_accept %>% 
+d_pca_efficacyeffectchangesecond <- d_accept %>% 
+  dplyr::select(
+    matches("sr_29[a-d]"))
+
+psych::alpha(d_pca_efficacyeffectchangesecond, use ="pairwise", na.rm = TRUE) 
+```
+
+#### Efficacy - 3rd Factor (Competency & Responsiveness of Fed, State, and Business) - Cronbach Alpha 
+```{r, eval=T, echo=F}
+d_pca_efficacycompetencyresponsivesecond <- d_accept %>% 
   dplyr::select(
     matches("sr_27[a-c]"),
     matches("sr_28[a-c]"))
 
-psych::alpha(d_pca_efficacycompetencyresponsive, use ="pairwise", na.rm = TRUE) 
+psych::alpha(d_pca_efficacycompetencyresponsivesecond, use ="pairwise", na.rm = TRUE) 
 ```
 
-#### Efficacy - 3rd Factor (Competency & Responsiveness of NGO) - Correlation 
+#### Efficacy - 4th Factor (Competency & Responsiveness of NGO) - Correlation 
 ```{r, eval=T, echo=F}
 res <- cor.test(d_accept$sr_27d_competent_ngo,d_accept$sr_28d_responsive_ngo, method = "spearman", exact=FALSE)
 print(res)
+
+mean(d_accept$sr_27d_competent_ngo, na.rm=TRUE)
+sd(d_accept$sr_27d_competent_ngo, na.rm=TRUE)
+
+mean(d_accept$sr_28d_responsive_ngo, na.rm=TRUE)
+sd(d_accept$sr_28d_responsive_ngo, na.rm=TRUE)
 ```
-Correlation test of the competency and responsiveness scores for NGOs shows moderate positive correlation. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
+Correlation test of the competency and responsiveness scores for NGOs shows moderate positive correlation. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.  
 
 $$\\[.05in]$$
 
@@ -509,11 +518,14 @@ $$\\[.05in]$$
 
 Three-factor solution:   
 1. Multi-item composite variable: cool/uncool, admirable/shameful, good/bad, exciting/boring   
-2. Multi-item composite variable: useful/useless, pleasant/intimidating, sensible/foolish   
+2. Multi-item composite variable: useful/useless, pleasant/intimidating, sensible/foolish  
 3. 1-item variable: easy/awkward   
 
-```{r, eval=T, echo=F}
+```{r, eval=F, echo=F, include=F}
 d_pca_behavioralattitude <- d_accept %>% 
+    dplyr::select(-"sr_32_contact_useful_reversed") %>% 
+    dplyr::select(-"sr_33_contact_pleasant_reversed") %>% 
+    dplyr::select(-"sr_37_contact_foolish_reversed") %>% 
   dplyr::select(
     matches("sr_32"),
     matches("sr_33"),
@@ -524,45 +536,194 @@ d_pca_behavioralattitude <- d_accept %>%
     matches("sr_38"),
     matches("sr_39"))
 
+
 fa.parallel(d_pca_behavioralattitude, fm='minres', fa='fa')
 pca1 <- fa(d_pca_behavioralattitude, nfactors = 3, rotate = "Varimax", fm="minres") 
 print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
 
-#### TPB Behavioral Attitude - 1st factor - Cronbach Alpha
 ```{r, eval=T, echo=F}
-d_pca_behavioralattitude1 <- d_accept %>% 
+d_accept <- d_accept %>% 
+  mutate(sr_32_contact_useful_reversed = car::recode(sr_32_contact_useful, "1=6 ; 2=5 ; 3=4 ; 4=3 ; 5=2 ; 6=1")) 
+
+d_accept <- d_accept %>% 
+  mutate(sr_33_contact_pleasant_reversed = car::recode(sr_33_contact_pleasant, "1=6 ; 2=5 ; 3=4 ; 4=3 ; 5=2 ; 6=1"))
+
+d_accept <- d_accept %>%
+  mutate(sr_37_contact_foolish_reversed = car::recode(sr_37_contact_foolish, "1=6 ; 2=5 ; 3=4 ; 4=3 ; 5=2 ; 6=1"))
+
+ba2 <- d_accept %>% 
   dplyr::select(
+    matches("sr_32_contact_useful_reversed"),
+    matches("sr_33_contact_pleasant_reversed"),
     matches("sr_34"),
-    matches("sr_38"),
+    matches("sr_35"),
     matches("sr_36"),
+    matches("sr_37_contact_foolish_reversed"),
+    matches("sr_38"),
     matches("sr_39"))
 
-psych::alpha(d_pca_behavioralattitude1, use ="pairwise", na.rm = TRUE) 
+
+fa.parallel(ba2, fm='minres', fa='fa')
+pca1 <- fa(ba2, nfactors = 3, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
 ```
+
+#### TPB Behavioral Attitude - 1st factor - Correlation
+```{r, eval=T, echo=F}
+res <- cor.test(d_accept$sr_38_contact_admirable,d_accept$sr_39_contact_good, method = "spearman")
+print(res)
+```
+The two measures of perceived behavioral control show a moderate positive relationship, just barely under the .65 rule of thumb. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.   
+
 
 #### TPB Behavioral Attitude - 2nd factor - Cronbach Alpha
 ```{r, eval=T, echo=F}
 d_pca_behavioralattitude2 <- d_accept %>% 
   dplyr::select(
-    matches("sr_32"),
-    matches("sr_33"),
-    matches("sr_37"))
+    matches("sr_32_contact_useful_reversed"),
+    matches("sr_33_contact_pleasant_reversed"),
+    matches("sr_37_contact_foolish_reversed"))
 
 psych::alpha(d_pca_behavioralattitude2, use ="pairwise", na.rm = TRUE) 
 ```
 
+#### TPB Behavioral Attitude - 3rd factor - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_behavioralattitude3 <- d_accept %>% 
+  dplyr::select(
+    matches("sr_34"),
+    matches("sr_35"),
+    matches("sr_36"))
+
+psych::alpha(d_pca_behavioralattitude3, use ="pairwise", na.rm = TRUE) 
+```
+
 $$\\[.05in]$$
+#### Perceived Behavioral Control - correlation
+```{r, eval=T, echo=F, warning=F}
+mean(d_accept$sr_35_contact_easy, na.rm=TRUE)
+sd(d_accept$sr_35_contact_easy, na.rm=TRUE)
+```
 
 ### Perceived Behavioral Control
 ```{r, eval=T, echo=F, warning=F}
 res <- cor.test(d_accept$sr_30_easy_to_call,d_accept$sr_31_able_to_call, method = "spearman")
 print(res)
+
+mean(d_accept$sr_30_easy_to_call, na.rm=TRUE)
+sd(d_accept$sr_30_easy_to_call, na.rm=TRUE)
+
+mean(d_accept$sr_31_able_to_call, na.rm=TRUE)
+sd(d_accept$sr_31_able_to_call, na.rm=TRUE)
 ```
-The two measures of perceived behavioral control show a moderate positive relationship, just barely under the .65 rule of thumb. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
+The two measures of perceived behavioral control show a moderate positive relationship, just barely under the .65 rule of thumb. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`. This is not a strong enough correlation to justify a composite variable of the two items, so they will stay separate.
 
 $$\\[.05in]$$
 
 ### Worldviews
 We decided these will be kept as-is.
+
+```{r, eval=T, echo=F}
+d_worldviews <- d_accept %>% 
+  dplyr::select(
+    matches("sr_41a"),
+    matches("sr_41b"),
+    matches("sr_41c"),
+    matches("sr_41d"),
+    matches("sr_41e"),
+    matches("sr_41f"))
+
+summary(d_worldviews)
+sapply(d_worldviews, sd, na.rm=TRUE)
+```
+$$\\[.05in]$$
+
+
+### CIM - Costs
+The variables included in this CIM Costs category currently are:   
+1. Age   
+2. Gender   
+3. # of dependents (<18 years old)   
+4. # of adult children (>=18 years old)   
+5. Race (1=white selected, 0=all other ethnicities, or white+ethnicity)  
+6. Level of education completed   
+7. Employment status   
+8. Total 2019 annual income   
+9. Political affiliation   
+10. Political leaning   
+
+```{r, eval=F, include=F}
+# Number of records w/ dependents, adult children, and no children
+d_accept %>% 
+  count(sr_57i_dependents >= 1)
+
+d_accept %>% 
+  count(sr_57j_adultchildren >= 1)
+
+d_accept %>% 
+  count(sr_57k_nochildren == 0)
+
+# Create dummy variables for race. 1=white, 0=all others; check accuracy of variable
+d_accept %>%
+  mutate(race_white_dumvar = ifelse(d_accept$sr_74_1_race_white==1 & is.na(d_accept$sr_74_2_race_black) & is.na(d_accept$sr_74_3_race_hispanic) & is.na(d_accept$sr_74_4_race_native_american) & is.na(d_accept$sr_74_5_race_east_asian) & is.na(d_accept$sr_74_6_race_middle_eastern) & is.na(d_accept$sr_74_7_race_south_asian),1,0)) %>%
+  dplyr::select(sr_74_1_race_white, sr_74_2_race_black, sr_74_3_race_hispanic, sr_74_4_race_native_american, sr_74_5_race_east_asian, sr_74_6_race_middle_eastern, sr_74_7_race_south_asian, race_white_dumvar) %>% 
+  arrange(desc(race_white_dumvar)) %>% 
+  head(10)
+
+# number of white respondents
+sum(d_accept$sr_74_1_race_white==1, na.rm = T)
+# number of other ethnicities
+sum(d_accept$sr_74_2_race_black==2 | d_accept$sr_74_3_race_hispanic==3 | d_accept$sr_74_4_race_native_american==4 | d_accept$sr_74_5_race_east_asian==5 | d_accept$sr_74_6_race_middle_eastern==6 | d_accept$sr_74_7_race_south_asian==7, na.rm = T)
+  
+```
+
+# Creating PCA variables for regression
+```{r, eval=T, include=T}
+# Dynamic, descriptive, and injunctive norms
+d_accept <- d_accept %>% 
+  mutate(
+    descdynamicnorms_comp = rowMeans(subset(d_accept, select = c(sr_24_past_contact, sr_25_future_contact)), na.rm = T),
+    desccontactnorms_fam_comp = rowMeans(subset(d_accept, select = c(sr_19b_contacting_officials_spouse, sr_19c_contacting_officials_children)), na.rm = T),
+    desccontactnorms_nf_comp = rowMeans(subset(d_accept, select = c(sr_19d_contacting_officials_otherfamily, sr_19e_contacting_officials_friends, sr_19f_contacting_officials_coworkers, sr_19g_contacting_officials_recpartners, sr_19h_contacting_officials_faithcommun)), na.rm=T),
+    descrolemodelnorms_fam_comp = rowMeans(subset(d_accept, select = c(sr_20b_rolemodels_spouse, sr_20c_rolemodels_children)), na.rm = T),
+    descrolemodelnorms_nf_comp = rowMeans(subset(d_accept, select = c(sr_20d_rolemodels_otherfamily, sr_20e_rolemodels_friends, sr_20f_rolemodels_coworkers, sr_20g_rolemodels_recpartners, sr_20h_rolemodels_faithcommun)), na.rm=T),
+    injunctcontactnorms_fam_comp = rowMeans(subset(d_accept, select = c(sr_22b_expect_contact_spouse, sr_22c_expect_contact_children)), na.rm = T),
+    injunctcontactnorms_nf_comp = rowMeans(subset(d_accept, select = c(sr_22d_expect_contact_otherfamily, sr_22e_expect_contact_friends, sr_22f_expect_contact_coworkers, sr_22g_expect_contact_recpartners, sr_22h_expect_contact_faithcommun)), na.rm=T),
+    injunctmotivation_fam_comp = rowMeans(subset(d_accept, select = c(sr_23a_motivated_to_comply_parents, sr_23b_motivated_to_comply_spouse,sr_23c_motivated_to_comply_children)), na.rm = T),
+    injunctmotivation_nf_comp = rowMeans(subset(d_accept, select = c(sr_23d_motivated_to_comply_otherfamily, sr_23e_motivated_to_comply_friends, sr_23f_motivated_to_comply_coworkers, sr_23g_motivated_to_comply_recpartners, sr_23h_motivated_to_comply_faithcommun)), na.rm = T),
+      )
+
+# CIM - Benefits
+d_accept <- d_accept %>% 
+  mutate(
+    cimbenefits_comp = rowMeans(subset(d_accept, select = c(sr_16_hear_friends_talk, sr_17_hear_media, sr_18_hear_public_officials)), na.rm = T))
+
+# CIM - Perceived Risk
+d_accept <- d_accept %>% 
+  mutate(
+    cimperceivedrisk_comp = rowMeans(subset(d_accept, select = c(sr_3a_importance_abortion, sr_8_importance_personally, sr_9_worried, sr_10_harm_you_personally)), na.rm = T))
+
+# Efficacy
+d_accept <- d_accept %>% 
+  mutate(
+    efficacy_effectiveness_comp = rowMeans(subset(d_accept, select = c(sr_29a_effective_fed, sr_29b_effective_state, sr_29c_effective_business, sr_29d_effective_ngo)), na.rm = T),
+    efficacy_fedstatebusiness_competresp_comp = rowMeans(subset(d_accept, select = c(sr_27a_competent_fed, sr_27b_competent_state, sr_27c_competent_business, sr_28a_responsive_fed, sr_28b_responsive_state, sr_28c_responsive_business)), na.rm = T),
+    efficacy_ngo_competresp_comp = rowMeans(subset(d_accept, select = c(sr_27d_competent_ngo, sr_28d_responsive_ngo)), na.rm = T)
+    )
+
+# TPB - Behavioral Attitude
+d_accept <- d_accept %>% 
+  mutate(
+    behatt_admirablegood_comp = rowMeans(subset(d_accept, select = c(sr_38_contact_admirable, sr_39_contact_good)), na.rm = T),
+    behatt_usefulpleasantsensible_comp = rowMeans(subset(d_accept, select = c(sr_32_contact_useful_reversed, sr_33_contact_pleasant_reversed, sr_37_contact_foolish_reversed)), na.rm = T),
+    behatt_coolexcitingeasy_comp = rowMeans(subset(d_accept, select = c(sr_34_contact_cool, sr_35_contact_easy, sr_36_contact_exciting)), na.rm = T)
+    )
+
+# test to make sure variable-creation code is working
+d_accept %>% 
+  dplyr::select(sr_32_contact_useful_reversed, sr_33_contact_pleasant_reversed, sr_37_contact_foolish_reversed, behatt_usefulpleasantsensible_comp)
+
+```
