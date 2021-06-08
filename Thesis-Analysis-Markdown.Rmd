@@ -132,11 +132,11 @@ ggqqplot(d_accept$sr_25_future_contact, ylab = "future contact")
 res <- cor.test(d_accept$sr_24_past_contact,d_accept$sr_25_future_contact, method = "spearman")
 print(res)
 
-mean(d_accept$sr_24_past_contact, na.rm=TRUE)
-sd(d_accept$sr_24_past_contact, na.rm=TRUE)
+#mean(d_accept$sr_24_past_contact, na.rm=TRUE)
+#sd(d_accept$sr_24_past_contact, na.rm=TRUE)
 
-mean(d_accept$sr_25_future_contact, na.rm=TRUE)
-sd(d_accept$sr_25_future_contact, na.rm=TRUE)
+#mean(d_accept$sr_25_future_contact, na.rm=TRUE)
+#sd(d_accept$sr_25_future_contact, na.rm=TRUE)
 ```
 Correlation test of the two dynamic norms items shows strong positive correlation, with Spearman's rho of `r res$estimate` and p-value of `r res$p.value`.
 
@@ -169,7 +169,7 @@ print(pca1$loadings,cutoff = 0.3)
 ```
 
 #### Descriptive Norms (contact) - 1st factor (Parents) - desc stats
-```{r, eval=T, echo=F}
+```{r, eval=T, echo=T}
 mean(d_accept$sr_19a_contacting_officials__parents, na.rm=TRUE)
 sd(d_accept$sr_19a_contacting_officials__parents, na.rm=TRUE)
 
@@ -182,11 +182,11 @@ sapply(d_pca_descriptivecontactnorms, sd, na.rm=TRUE)
 res <- cor.test(d_accept$sr_19b_contacting_officials_spouse,d_accept$sr_19c_contacting_officials_children, method = "spearman", exact=FALSE)
 print(res)
 
-mean(d_accept$sr_19b_contacting_officials_spouse, na.rm=TRUE)
-sd(d_accept$sr_19b_contacting_officials_spouse, na.rm=TRUE)
+# mean(d_accept$sr_19b_contacting_officials_spouse, na.rm=TRUE)
+# sd(d_accept$sr_19b_contacting_officials_spouse, na.rm=TRUE)
 
-mean(d_accept$sr_19c_contacting_officials_children, na.rm=TRUE)
-sd(d_accept$sr_19c_contacting_officials_children, na.rm=TRUE)
+# mean(d_accept$sr_19c_contacting_officials_children, na.rm=TRUE)
+# sd(d_accept$sr_19c_contacting_officials_children, na.rm=TRUE)
 ```
 Correlation test of the two descriptive norms items for Spouse and Children, showing moderate positive correlation. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
 
@@ -201,8 +201,6 @@ d_pca_descriptivecontactnormsnonfamily <- d_accept %>%
     matches("sr_19h"))
 
 psych::alpha(d_pca_descriptivecontactnormsnonfamily, use ="pairwise", na.rm = TRUE) 
-
-
 ```
 
 $$\\[.05in]$$
@@ -624,11 +622,11 @@ sd(d_accept$sr_35_contact_easy, na.rm=TRUE)
 res <- cor.test(d_accept$sr_30_easy_to_call,d_accept$sr_31_able_to_call, method = "spearman")
 print(res)
 
-mean(d_accept$sr_30_easy_to_call, na.rm=TRUE)
-sd(d_accept$sr_30_easy_to_call, na.rm=TRUE)
+#mean(d_accept$sr_30_easy_to_call, na.rm=TRUE)
+#sd(d_accept$sr_30_easy_to_call, na.rm=TRUE)
 
-mean(d_accept$sr_31_able_to_call, na.rm=TRUE)
-sd(d_accept$sr_31_able_to_call, na.rm=TRUE)
+#mean(d_accept$sr_31_able_to_call, na.rm=TRUE)
+#sd(d_accept$sr_31_able_to_call, na.rm=TRUE)
 ```
 The two measures of perceived behavioral control show a moderate positive relationship, just barely under the .65 rule of thumb. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`. This is not a strong enough correlation to justify a composite variable of the two items, so they will stay separate.
 
@@ -654,7 +652,8 @@ $$\\[.05in]$$
 
 
 # Creating PCA variables for regression
-```{r, eval=T, include=T}
+#### leaving this out of the markup file unless you'd like to review the variable creation code
+```{r, eval=T, include=F}
 # Dynamic, descriptive, and injunctive norms
 d_accept <- d_accept %>% 
   mutate(
@@ -700,8 +699,63 @@ d_accept %>%
   dplyr::select(sr_32_contact_useful_reversed, sr_33_contact_pleasant_reversed, sr_37_contact_foolish_reversed, behatt_usefulpleasantsensible_comp)
 ```
 
+```{r, eval=F, echo=F}
+mean(d_accept$descdynamicnorms_comp, na.rm=T)
+sd(d_accept$descdynamicnorms_comp, na.rm=T)
+
+mean(d_accept$desccontactnorms_fam_comp, na.rm=T)
+sd(d_accept$desccontactnorms_fam_comp, na.rm=T)
+
+mean(d_accept$desccontactnorms_nf_comp, na.rm=T)
+sd(d_accept$desccontactnorms_nf_comp, na.rm=T)
+
+mean(d_accept$descrolemodelnorms_fam_comp, na.rm=T)
+sd(d_accept$descrolemodelnorms_fam_comp, na.rm=T)
+
+mean(d_accept$descrolemodelnorms_nf_comp, na.rm=T)
+sd(d_accept$descrolemodelnorms_nf_comp, na.rm=T)
+
+mean(d_accept$injunctcontactnorms_fam_comp, na.rm=T)
+sd(d_accept$injunctcontactnorms_fam_comp, na.rm=T)
+
+mean(d_accept$injunctcontactnorms_nf_comp, na.rm=T)
+sd(d_accept$injunctcontactnorms_nf_comp, na.rm=T)
+
+mean(d_accept$injunctmotivation_fam_comp, na.rm=T)
+sd(d_accept$injunctmotivation_fam_comp, na.rm=T)
+
+mean(d_accept$injunctmotivation_nf_comp, na.rm=T)
+sd(d_accept$injunctmotivation_nf_comp, na.rm=T)
+
+mean(d_accept$cimbenefits_comp, na.rm=T)
+sd(d_accept$cimbenefits_comp, na.rm=T)
+
+mean(d_accept$cimperceivedrisk_comp, na.rm=T)
+sd(d_accept$cimperceivedrisk_comp, na.rm=T)
+
+mean(d_accept$efficacy_effectiveness_comp, na.rm=T)
+sd(d_accept$efficacy_effectiveness_comp, na.rm=T)
+
+mean(d_accept$efficacy_fedstatebusiness_competresp_comp, na.rm=T)
+sd(d_accept$efficacy_fedstatebusiness_competresp_comp, na.rm=T)
+
+mean(d_accept$efficacy_ngo_competresp_comp, na.rm=T)
+sd(d_accept$efficacy_ngo_competresp_comp, na.rm=T)
+
+mean(d_accept$behatt_admirablegood_comp, na.rm=T)
+sd(d_accept$behatt_admirablegood_comp, na.rm=T)
+
+mean(d_accept$behatt_usefulpleasantsensible_comp, na.rm=T)
+sd(d_accept$behatt_usefulpleasantsensible_comp, na.rm=T)
+
+mean(d_accept$behatt_coolexcitingeasy_comp, na.rm=T)
+sd(d_accept$behatt_coolexcitingeasy_comp, na.rm=T)
+```
+$$\\[.05in]$$
+
 # Creating dummy categorical variables
-```{r, eval=T, include=T}
+#### leaving this out of the markup file unless you'd like to review the variable creation code
+```{r, eval=T, include=F}
 # Gender (3 categories: Female, male, other, prefer not to say. Ref: Female)
 d_accept <- dummy_cols(d_accept, select_columns = 'gender')
 
@@ -790,7 +844,7 @@ d_accept %>%
   arrange(desc(race_white_dumvar)) %>% 
   head(700)
   
-# Political affiliation (6 categories: Dem, Rep, Independent, Green party, Libertarian, No party, other. Ref: Dem)
+# Political affiliation (5 categories: Dem, Rep, Independent, Green party, Libertarian, No party. Ref: Dem)
 d_accept <- dummy_cols(d_accept, select_columns = "sr_78_political_affiliation")
 
 d_accept <- d_accept %>% 
@@ -822,8 +876,6 @@ d_accept %>%
   )
 
 ```
-
-
 ```{r eval=F, include=F}
 # Age   
 
@@ -841,29 +893,36 @@ sum(d_accept$sr_74_1_race_white==1, na.rm = T)
 sum(d_accept$sr_74_2_race_black==2 | d_accept$sr_74_3_race_hispanic==3 | d_accept$sr_74_4_race_native_american==4 | d_accept$sr_74_5_race_east_asian==5 | d_accept$sr_74_6_race_middle_eastern==6 | d_accept$sr_74_7_race_south_asian==7, na.rm = T)
 ```
 
-
+$$\\[.05in]$$
 # Ordinal logistic regression
+$$\\[.05in]$$
+
 ```{r, eval=T, include=T}
 library(MASS)
 
-
-
-
-# Convert Past contact to a factor and assign labels
+# Convert RV (12a) past contact to a factor and assign labels
 d_accept$sr_12a_actions_contacted_officials_factor <- factor(d_accept$sr_12a_actions_contacted_officials)
 levels(d_accept$sr_12a_actions_contacted_officials_factor) <- list("NoContact"="1", "Once"="2", "MoreOnce"="3")
 
-d_accept %>% 
-  dplyr::select(sr_12a_actions_contacted_officials_factor, sr_12a_actions_contacted_officials) %>% 
-  head(200)
-
-head(d_accept$sr_12a_actions_contacted_officials)
-str(d_accept$sr_12a_actions_contacted_officials_factor)
+# d_accept %>% dplyr::select(sr_12a_actions_contacted_officials_factor, sr_12a_actions_contacted_officials) %>% head(200)
 
 # Build ordinal logistic regression model
-model_test <- d_accept %>% 
-  polr(sr_12a_actions_contacted_officials_factor ~ race_white_dumvar + sr_9_worried, data = d_accept, Hess = TRUE)
+ord_reg_model <- polr(d_accept$sr_12a_actions_contacted_officials_factor ~ 
+                        descdynamicnorms_comp + sr_19a_contacting_officials__parents + desccontactnorms_fam_comp + desccontactnorms_nf_comp + sr_20a_rolemodels_parents + descrolemodelnorms_fam_comp + descrolemodelnorms_nf_comp + sr_22a_expect_contact_parents + injunctcontactnorms_fam_comp + injunctcontactnorms_nf_comp + injunctmotivation_fam_comp + injunctmotivation_nf_comp + cimbenefits_comp + cimperceivedrisk_comp + sr_7_believe_about_climate_change + sr_11_harm_future_generations + sr_21a_effective_actions_contacting_officials + efficacy_effectiveness_comp + efficacy_fedstatebusiness_competresp_comp + efficacy_ngo_competresp_comp + behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp + behatt_coolexcitingeasy_comp + sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + sr_41e_govt_do_more + sr_41f_equity + age + gender_male + gender_other + gender_prefernottosay + sr_56_marital_status_marriedpartner + sr_56_marital_status_divorcedseparated + sr_56_marital_status_widowed + sr_57i_dependents + sr_57j_adultchildren + sr_61_education_highschooldegree + sr_61_education_somecollege + sr_61_education_associatedegree + sr_61_education_bachelordegree + sr_61_education_gradorprofdegree + sr_71_employment_status_workparttime + sr_71_employment_status_homemaker + sr_71_employment_status_retired + sr_71_employment_status_student + sr_71_employment_status_unemployed + sr_72_income_25to49k + sr_72_income_50to74k + sr_72_income_75to99k + sr_72_income_100to149k + sr_72_income_150to199k + sr_72_income_200to249k + sr_72_income_over250k + sr_72_income_prefernottoanswer + race_white_dumvar + sr_78_political_affiliation_Rep + sr_78_political_affiliation_Ind + sr_78_political_affiliation_Green + sr_78_political_affiliation_Libertarian + sr_78_political_affiliation_NoParty + sr_79_political_leaning_SomeLib + sr_79_political_leaning_Moderate + sr_79_political_leaning_SomeConservative + sr_79_political_leaning_VeryConservative , data = d_accept, Hess = T)
 
-summary(model_test)
+summary(ord_reg_model)
+
+# Analyze p-values, combine back into summary table
+#ctable <- coef(summary(ord_reg_model))
+#p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
+#ctable <- cbind(ctable, "p value" = p)
+#ctable
+
+# Add CIs for variables
+#(ci <- confint(ord_reg_model)) # default method gives profiled CIs
+#confint.default(ord_reg_model) # CIs assuming normality
+#exp(coef(ord_reg_model))
+#exp(cbind(OR = coef(ord_reg_model), ci))
+
 
 ```
