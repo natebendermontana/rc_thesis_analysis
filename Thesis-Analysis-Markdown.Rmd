@@ -15,6 +15,7 @@ setwd("/Users/natebender/Desktop/Repo/RCthesisanalysis/")
 # install.packages("ltm")
 # install.packages("fBasics")
 # install.packages("ggcorrplot")
+# install.packages("fastDummies")
 library(psych)
 library(tidyverse)
 library(dplyr)
@@ -26,6 +27,7 @@ library(ggpubr)
 library(fBasics)
 library(ggcorrplot)
 library(car)
+library(fastDummies)
 ```
 
 ```{r, include=FALSE}
@@ -92,9 +94,18 @@ ggcorrplot(cormatdesccontactnorms, # correlation matrix
            lab = TRUE) # add correlation values as labels
 ```
 
+```{r, eval=F, include=F, echo=F}
+# EDA on dependent variables
+mean(d_accept$sr_12a_actions_contacted_officials, na.rm=TRUE)
+sd(d_accept$sr_12a_actions_contacted_officials, na.rm=TRUE)
+
+# intention
+mean(d_accept$sr_13a_takeactions_contact_officials, na.rm=TRUE)
+sd(d_accept$sr_13a_takeactions_contact_officials, na.rm=TRUE)
+```
+
 # Principal Components Analysis
 $$\\[.05in]$$
-
 ### Dynamic Norms
 *"Do you think that over the PAST/NEXT 12 months the percentage of adults in the United States who contacted elected officials to urge them to take action to reduce global warming is..."*   
 
@@ -642,44 +653,6 @@ sapply(d_worldviews, sd, na.rm=TRUE)
 $$\\[.05in]$$
 
 
-### CIM - Costs
-The variables included in this CIM Costs category currently are:   
-1. Age   
-2. Gender   
-3. # of dependents (<18 years old)   
-4. # of adult children (>=18 years old)   
-5. Race (1=white selected, 0=all other ethnicities, or white+ethnicity)  
-6. Level of education completed   
-7. Employment status   
-8. Total 2019 annual income   
-9. Political affiliation   
-10. Political leaning   
-
-```{r, eval=F, include=F}
-# Number of records w/ dependents, adult children, and no children
-d_accept %>% 
-  count(sr_57i_dependents >= 1)
-
-d_accept %>% 
-  count(sr_57j_adultchildren >= 1)
-
-d_accept %>% 
-  count(sr_57k_nochildren == 0)
-
-# Create dummy variables for race. 1=white, 0=all others; check accuracy of variable
-d_accept %>%
-  mutate(race_white_dumvar = ifelse(d_accept$sr_74_1_race_white==1 & is.na(d_accept$sr_74_2_race_black) & is.na(d_accept$sr_74_3_race_hispanic) & is.na(d_accept$sr_74_4_race_native_american) & is.na(d_accept$sr_74_5_race_east_asian) & is.na(d_accept$sr_74_6_race_middle_eastern) & is.na(d_accept$sr_74_7_race_south_asian),1,0)) %>%
-  dplyr::select(sr_74_1_race_white, sr_74_2_race_black, sr_74_3_race_hispanic, sr_74_4_race_native_american, sr_74_5_race_east_asian, sr_74_6_race_middle_eastern, sr_74_7_race_south_asian, race_white_dumvar) %>% 
-  arrange(desc(race_white_dumvar)) %>% 
-  head(10)
-
-# number of white respondents
-sum(d_accept$sr_74_1_race_white==1, na.rm = T)
-# number of other ethnicities
-sum(d_accept$sr_74_2_race_black==2 | d_accept$sr_74_3_race_hispanic==3 | d_accept$sr_74_4_race_native_american==4 | d_accept$sr_74_5_race_east_asian==5 | d_accept$sr_74_6_race_middle_eastern==6 | d_accept$sr_74_7_race_south_asian==7, na.rm = T)
-  
-```
-
 # Creating PCA variables for regression
 ```{r, eval=T, include=T}
 # Dynamic, descriptive, and injunctive norms
@@ -725,5 +698,172 @@ d_accept <- d_accept %>%
 # test to make sure variable-creation code is working
 d_accept %>% 
   dplyr::select(sr_32_contact_useful_reversed, sr_33_contact_pleasant_reversed, sr_37_contact_foolish_reversed, behatt_usefulpleasantsensible_comp)
+```
+
+# Creating dummy categorical variables
+```{r, eval=T, include=T}
+# Gender (3 categories: Female, male, other, prefer not to say. Ref: Female)
+d_accept <- dummy_cols(d_accept, select_columns = 'gender')
+
+d_accept <- d_accept %>% 
+  rename(gender_female = gender_1,
+         gender_male = gender_2,
+         gender_other = gender_3,
+         gender_prefernottosay = gender_4)
+
+d_accept %>% 
+  dplyr::select(
+    starts_with("gender")
+  )
+
+# Marital Status (3 categories: single, married/partner, divorced/separated, widowed. Ref: Single)
+d_accept <- dummy_cols(d_accept, select_columns = "sr_56_marital_status")
+
+d_accept <- d_accept %>% 
+  rename(sr_56_marital_status_single = sr_56_marital_status_1,
+         sr_56_marital_status_marriedpartner = sr_56_marital_status_2,
+         sr_56_marital_status_divorcedseparated = sr_56_marital_status_3,
+         sr_56_marital_status_widowed = sr_56_marital_status_4)
+
+d_accept %>% 
+  dplyr::select(
+    starts_with("sr_56_marital_status")
+  )
+
+# Education level (5 categories: some high school, high school grad or equiv, some college, Assoc deg, Bachelor deg, Grad/prof deg. Ref: Some high school)
+d_accept <- dummy_cols(d_accept, select_columns = "sr_61_education")
+
+d_accept <- d_accept %>% 
+  rename(sr_61_education_somehighschool = sr_61_education_1,
+         sr_61_education_highschooldegree = sr_61_education_2,
+         sr_61_education_somecollege = sr_61_education_3,
+         sr_61_education_associatedegree = sr_61_education_4,
+         sr_61_education_bachelordegree = sr_61_education_5,
+         sr_61_education_gradorprofdegree = sr_61_education_6)
+
+d_accept %>% 
+  dplyr::select(
+    starts_with("sr_61_education")
+  )
+
+# Type of work (5 categories: fulltime work, parttime work, homemaker, retired/semiretired, student, unemployed. Ref: Fulltime work)
+d_accept <- dummy_cols(d_accept, select_columns = "sr_71_employment_status")
+
+d_accept <- d_accept %>% 
+  rename(sr_71_employment_status_workfulltime = sr_71_employment_status_1,
+         sr_71_employment_status_workparttime = sr_71_employment_status_2,
+         sr_71_employment_status_homemaker = sr_71_employment_status_3,
+         sr_71_employment_status_retired = sr_71_employment_status_4,
+         sr_71_employment_status_student = sr_71_employment_status_5,
+         sr_71_employment_status_unemployed = sr_71_employment_status_6)
+
+d_accept %>% 
+  dplyr::select(
+    starts_with("sr_71_employment_status")
+  )
+
+# Income level (8 categories: under25k, 25-50, 50-75, 75-100, 100-150. 150-200, 200-250, 250+, prefer not to say. Ref: under25k)
+d_accept <- dummy_cols(d_accept, select_columns = "sr_72_income")
+
+d_accept <- d_accept %>% 
+  rename(sr_72_income_under25k = sr_72_income_1,
+         sr_72_income_25to49k = sr_72_income_2,
+         sr_72_income_50to74k = sr_72_income_3,
+         sr_72_income_75to99k = sr_72_income_4,
+         sr_72_income_100to149k = sr_72_income_5,
+         sr_72_income_150to199k = sr_72_income_6,
+         sr_72_income_200to249k = sr_72_income_7,
+         sr_72_income_over250k = sr_72_income_8,
+         sr_72_income_prefernottoanswer = sr_72_income_9)
+
+d_accept %>% 
+  dplyr::select(
+    starts_with("sr_72_income")
+  )
+
+# Race (1 category: white, any other. Ref: white) # race_white_dumvar
+d_accept <- d_accept %>%
+  mutate(race_white_dumvar = ifelse(d_accept$sr_74_1_race_white==1 & is.na(d_accept$sr_74_2_race_black) & is.na(d_accept$sr_74_3_race_hispanic) & is.na(d_accept$sr_74_4_race_native_american) & is.na(d_accept$sr_74_5_race_east_asian) & is.na(d_accept$sr_74_6_race_middle_eastern) & is.na(d_accept$sr_74_7_race_south_asian),1,0))
+  
+d_accept %>%
+  dplyr::select(sr_74_1_race_white, sr_74_2_race_black, sr_74_3_race_hispanic, sr_74_4_race_native_american, sr_74_5_race_east_asian, sr_74_6_race_middle_eastern, sr_74_7_race_south_asian, race_white_dumvar) %>% 
+  arrange(desc(race_white_dumvar)) %>% 
+  head(700)
+  
+# Political affiliation (6 categories: Dem, Rep, Independent, Green party, Libertarian, No party, other. Ref: Dem)
+d_accept <- dummy_cols(d_accept, select_columns = "sr_78_political_affiliation")
+
+d_accept <- d_accept %>% 
+  rename(sr_78_political_affiliation_Dem = sr_78_political_affiliation_1,
+         sr_78_political_affiliation_Rep = sr_78_political_affiliation_2,
+         sr_78_political_affiliation_Ind = sr_78_political_affiliation_3,
+         sr_78_political_affiliation_Green = sr_78_political_affiliation_4,
+         sr_78_political_affiliation_Libertarian = sr_78_political_affiliation_5,
+         sr_78_political_affiliation_NoParty = sr_78_political_affiliation_6)
+
+d_accept %>% 
+  dplyr::select(
+    starts_with("sr_78_political_affiliation")
+  )
+
+# Ideology (4 categories: very lib, somewhat lib, moderate, somewhat conservative, very conservative. Ref: Very liberal)
+d_accept <- dummy_cols(d_accept, select_columns = "sr_79_political_leaning")
+
+d_accept <- d_accept %>% 
+  rename(sr_79_political_leaning_VeryLib = sr_79_political_leaning_1,
+         sr_79_political_leaning_SomeLib = sr_79_political_leaning_2,
+         sr_79_political_leaning_Moderate = sr_79_political_leaning_3,
+         sr_79_political_leaning_SomeConservative = sr_79_political_leaning_4,
+         sr_79_political_leaning_VeryConservative = sr_79_political_leaning_5)
+
+d_accept %>% 
+  dplyr::select(
+    starts_with("sr_79_political_leaning")
+  )
+
+```
+
+
+```{r eval=F, include=F}
+# Age   
+
+# Number of records w/ dependents, adult children, and no children
+d_accept %>% 
+  count(sr_57i_dependents >= 1)
+d_accept %>% 
+  count(sr_57j_adultchildren >= 1)
+d_accept %>% 
+  count(sr_57k_nochildren == 0)
+
+# number of white respondents
+sum(d_accept$sr_74_1_race_white==1, na.rm = T)
+# number of other ethnicities
+sum(d_accept$sr_74_2_race_black==2 | d_accept$sr_74_3_race_hispanic==3 | d_accept$sr_74_4_race_native_american==4 | d_accept$sr_74_5_race_east_asian==5 | d_accept$sr_74_6_race_middle_eastern==6 | d_accept$sr_74_7_race_south_asian==7, na.rm = T)
+```
+
+
+# Ordinal logistic regression
+```{r, eval=T, include=T}
+library(MASS)
+
+
+
+
+# Convert Past contact to a factor and assign labels
+d_accept$sr_12a_actions_contacted_officials_factor <- factor(d_accept$sr_12a_actions_contacted_officials)
+levels(d_accept$sr_12a_actions_contacted_officials_factor) <- list("NoContact"="1", "Once"="2", "MoreOnce"="3")
+
+d_accept %>% 
+  dplyr::select(sr_12a_actions_contacted_officials_factor, sr_12a_actions_contacted_officials) %>% 
+  head(200)
+
+head(d_accept$sr_12a_actions_contacted_officials)
+str(d_accept$sr_12a_actions_contacted_officials_factor)
+
+# Build ordinal logistic regression model
+model_test <- d_accept %>% 
+  polr(sr_12a_actions_contacted_officials_factor ~ race_white_dumvar + sr_9_worried, data = d_accept, Hess = TRUE)
+
+summary(model_test)
 
 ```
