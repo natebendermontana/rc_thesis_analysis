@@ -85,15 +85,13 @@ apply(d_accept, 2, missingpercentages)
 
 # Check missing values for only variables used in OLR, NOT INCLUDING THE VARS USED IN THE FACTOR ANALYSIS
 
-
-
 OLRorigvarsmissing <- d_accept %>% dplyr::select(
   matches("sr_12a_actions_contacted_officials"), 
   matches("gender"),
   matches("age"),
   -matches("age_range"),
-  # race
-  # number of children
+  matches("race_present_dumvar"),
+  matches("children_responded"),
   matches("sr_19a_contacting_officials__parents"),
   matches("sr_20a_rolemodels_parents"),
   matches("sr_22a_expect_contact_parents"),
@@ -137,13 +135,14 @@ d_accept %>% count(descdynamicnorms_comp)
 
 
 ```{r eval=T, echo=F}
-# Checking missing values in all original vars that went into composite vars as output of factor analysis
+# Checking missing values in all original vars that went into factor analysis and subsequently into composite variables.
 
 OLRcompvarsmissing <- d_accept %>% dplyr::select(
   matches("sr_24_past_contact"),
   matches("sr_25_future_contact"),
   
-  matches("sr_19[b-c]"),
+  matches("sr_19b_contacting_officials_spouse"),
+  matches("sr_19c_contacting_officials_children"),
 
   matches("sr_19d_contacting_officials_otherfamily"),
   matches("sr_19e_contacting_officials_friends"),
@@ -216,6 +215,7 @@ OLRcompvarsmissing <- d_accept %>% dplyr::select(
 p_missing <- unlist(lapply(OLRcompvarsmissing, function(x) sum(is.na(x))))/nrow(d_accept)
 sort(p_missing[p_missing > 0], decreasing = TRUE)
 
+
 ```
 #### Listwise deletion: we drop 40% of the data, from 1055 to 637 responses.
 ```{r eval=F, echo=F}
@@ -224,8 +224,9 @@ OLRdata <- d_accept %>% dplyr::select(
   matches("sr_24_past_contact"),
   matches("sr_25_future_contact"),
   
-  matches("sr_19[b-c]"),
-
+  matches("sr_19b_contacting_officials_spouse"),
+  matches("sr_19c_contacting_officials_children"),
+  
   matches("sr_19d_contacting_officials_otherfamily"),
   matches("sr_19e_contacting_officials_friends"),
   matches("sr_19f_contacting_officials_coworkers"),
@@ -294,7 +295,9 @@ OLRdata <- d_accept %>% dplyr::select(
   matches("sr_34_contact_cool"),
   matches("sr_35_contact_easy"),
   matches("sr_36_contact_exciting"),
-  matches("sr_12a_actions_contacted_officials"), 
+  matches("sr_12a_actions_contacted_officials"),
+  matches("race_present_dumvar"),
+  matches("children_responded"),
   matches("gender"),
   matches("age"),
   -matches("age_range"),
@@ -320,7 +323,7 @@ OLRdata <- d_accept %>% dplyr::select(
   matches("sr_79_political_leaning")
 )
 
-# We drop from 1055 to 637 respondents when using listwise deletion
+# We drop from 1055 to 520 respondents when using listwise deletion
 OLR_complete_cases <- OLRdata[complete.cases(OLRdata), ]
 dim(OLR_complete_cases)
 
@@ -384,7 +387,7 @@ cbind(
 # Age   
 
 # Number of records w/ dependents, adult children, and no children
-# (1055 - 777)/1055  # 26.3% of resp did not answer question
+# 26.3% of resp did not answer question. 777 responses, 278 missing.
 d_accept %>% 
   count(sr_57i_dependents >= 1)  # 274 resp w/ children <18
 d_accept %>% 
@@ -392,6 +395,24 @@ d_accept %>%
 d_accept %>% 
   count(sr_57k_nochildren == 0)  # 110 resp w/ no children
 
+# Change the obviously erroneous value of 99 dependents to NA
+d_accept <- d_accept %>% 
+    mutate(sr_57i_dependents = na_if(sr_57i_dependents, 99))  
+
+# Create new variable for race to aid the listwise deletion. This race_present is a dummy var, 1 if respondent marked their race, 0 if the question was skipped. 
+# With the way the race var was originally set up the listwise deletion would see the NAs in the other categories of race and delete the entry, even if one race had actually been chosen. 
+
+# children_responded (1 category: 1==q answered, NA==question skipped)
+d_accept <- d_accept %>%
+  mutate(children_responded = ifelse(d_accept$sr_57i_dependents >= 1 | d_accept$sr_57j_adultchildren >= 1 | d_accept$sr_57k_nochildren==0,1,0))
+  
+# Check code
+d_accept %>%
+  dplyr::select(sr_57i_dependents, sr_57j_adultchildren, sr_57k_nochildren, children_responded) %>% 
+  arrange(desc(sr_57i_dependents)) %>% 
+  head(1000)
+
+sum(d_accept$children_responded==1, na.rm=T)
 
 
 # Percentage of missing data on race - 21% missing
@@ -405,7 +426,20 @@ whitecount <- sum(d_accept$sr_74_1_race_white==1, na.rm = T)
 othercount <- sum(d_accept$sr_74_2_race_black==2 | d_accept$sr_74_3_race_hispanic==3 | d_accept$sr_74_4_race_native_american==4 | d_accept$sr_74_5_race_east_asian==5 | d_accept$sr_74_6_race_middle_eastern==6 | d_accept$sr_74_7_race_south_asian==7, na.rm = T)
 
 
+# Create new variable for race to aid the listwise deletion. This race_present is a dummy var, 1 if respondent marked their race, 0 if the question was skipped. 
+# With the way the race var was originally set up the listwise deletion would see the NAs in the other categories of race and delete the entry, even if one race had actually been chosen. 
 
+# Race_present (1 category: 1==race chosen, NA==question skipped)
+d_accept <- d_accept %>%
+  mutate(race_present_dumvar = ifelse(d_accept$sr_74_1_race_white==1 | d_accept$sr_74_2_race_black==2 | d_accept$sr_74_3_race_hispanic==3 | d_accept$sr_74_4_race_native_american==4 | d_accept$sr_74_5_race_east_asian==5 | d_accept$sr_74_6_race_middle_eastern==6 | d_accept$sr_74_7_race_south_asian==7,1,0))
+  
+na_if(d_accept$race_present_dumvar, 0)
+
+# Check code
+d_accept %>%
+  dplyr::select(sr_74_1_race_white, sr_74_2_race_black, sr_74_3_race_hispanic, sr_74_4_race_native_american, sr_74_5_race_east_asian, sr_74_6_race_middle_eastern, sr_74_7_race_south_asian, race_white_dumvar, race_present_dumvar) %>% 
+  arrange(desc(race_white_dumvar)) %>% 
+  head(1000)
 ```
 
 ```{r, eval=F, include=F, echo=F}
@@ -1152,6 +1186,7 @@ d_accept %>%
 d_accept <- d_accept %>%
   mutate(race_white_dumvar = ifelse(d_accept$sr_74_1_race_white==1 & is.na(d_accept$sr_74_2_race_black) & is.na(d_accept$sr_74_3_race_hispanic) & is.na(d_accept$sr_74_4_race_native_american) & is.na(d_accept$sr_74_5_race_east_asian) & is.na(d_accept$sr_74_6_race_middle_eastern) & is.na(d_accept$sr_74_7_race_south_asian),1,0))
   
+# CHeck code
 d_accept %>%
   dplyr::select(sr_74_1_race_white, sr_74_2_race_black, sr_74_3_race_hispanic, sr_74_4_race_native_american, sr_74_5_race_east_asian, sr_74_6_race_middle_eastern, sr_74_7_race_south_asian, race_white_dumvar) %>% 
   arrange(desc(race_white_dumvar)) %>% 
@@ -1168,6 +1203,7 @@ d_accept <- d_accept %>%
          sr_78_political_affiliation_Libertarian = sr_78_political_affiliation_5,
          sr_78_political_affiliation_NoParty = sr_78_political_affiliation_6)
 
+# Check code
 d_accept %>% 
   dplyr::select(
     starts_with("sr_78_political_affiliation")
@@ -1183,6 +1219,7 @@ d_accept <- d_accept %>%
          sr_79_political_leaning_SomeConservative = sr_79_political_leaning_4,
          sr_79_political_leaning_VeryConservative = sr_79_political_leaning_5)
 
+# Check code
 d_accept %>% 
   dplyr::select(
     starts_with("sr_79_political_leaning")

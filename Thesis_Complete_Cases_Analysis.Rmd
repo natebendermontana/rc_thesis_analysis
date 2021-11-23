@@ -1,0 +1,1389 @@
+---
+title: "Thesis Analysis"
+author: "Nate Bender"
+date: "11/19/2021"
+note: "Nationally-representative survey; conducted Aug 3-9, 2020"
+output: html_document
+---
+
+```{r child code extra, eval=F, include=F, echo=F}
+# COMMENTING OUT THIS BLOCK OF CODE FOR NOW. CAN COME BACK TO IT LATER IF WE WANT TO GET MORE GRANULAR WITH SEPARATING CHILDREN>18 AND DEPENDENTS. 
+# # children_responded dummy var (1 category: 1==q answered, NA==question skipped)
+# d_accept <- d_accept %>%
+#   mutate(children_responded = ifelse(d_accept$sr_57i_dependents >= 1 | d_accept$sr_57j_adultchildren >= 1 | d_accept$sr_57k_nochildren==0,1,0))
+# 
+# # Dummy var for children under 18 / 273 w dependents
+# d_accept <- d_accept %>%
+#   mutate(dependents_dumvar = ifelse(children_responded==1 & sr_57i_dependents >=1,1,0))
+# describe(d_accept$dependents_dumvar==1)
+# 
+# # Dummy var for adult children / 391 w adult children
+# d_accept <- d_accept %>%
+#   mutate(adultchild_dumvar = ifelse(children_responded==1 & sr_57j_adultchildren >=1,1,0))
+# describe(d_accept$adultchild_dumvar==1)
+# 
+# # Dummy var for no children / 109 w/o children
+# d_accept <- d_accept %>% 
+#   mutate(nochildren_dumvar = ifelse(children_responded==1 & adultchild_dumvar==0 & dependents_dumvar==0,1,0))
+# describe(d_accept$nochildren_dumvar==1)
+# 
+# # 62 respondents who have both dependents and adult children
+# d_accept %>% 
+#   mutate(test = ifelse(d_accept$sr_57j_adultchildren>=1 & d_accept$sr_57i_dependents>=1,1,0)) %>% 
+#   count(test)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load packages and data, eval=T, include=F}
+### Packages / libraries / load data & filter rejected out 
+
+setwd("/Users/natebender/Desktop/Repo/RCthesisanalysis/")
+# install.packages("ltm")
+# install.packages("fBasics")
+# install.packages("ggcorrplot")
+# install.packages("fastDummies")
+
+library(psych)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggfortify)
+library(GPArotation)
+library(ltm)
+library(ggpubr)
+library(fBasics)
+library(ggcorrplot)
+library(car)
+library(fastDummies)
+library(MASS)
+library(Hmisc)
+library(car)
+
+# Load data, create second dataset of only accepted responses
+d <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/dyn_national_20200828 - results-20200930-082116_NEW.csv")
+
+d_accept <- d %>% 
+  dplyr::filter(reject == 0)
+
+```
+
+```{r check missing data, eval=F, echo=F, include=F}
+### Checking missing values
+
+
+# # Checking for missing values across all variables. 
+# # Pulled this code randomly from internet. No idea how it works. 
+# 
+# cbind(
+#    lapply(
+#      lapply(d_accept, is.na)
+#      , sum)
+#    )
+# 
+# # ton of missing data on these questions:
+# # 40[a-r] 
+# # 14[a-j]
+# # 43-46
+
+
+# # Percentages of missing data by variable
+# missingpercentages <- function(x) {sum(is.na(x))/length(x)*100}
+# apply(d_accept, 2, missingpercentages)
+
+# # Check missing values for only variables used in OLR, NOT INCLUDING THE VARS USED IN THE FACTOR ANALYSIS
+# OLRorigvarsmissing <- d_accept %>% dplyr::select(
+#   matches("sr_12a_actions_contacted_officials"),
+#   matches("gender"),
+#   matches("age"),
+#   -matches("age_range"),
+#   matches("race_present_dumvar"),
+#   matches("children_responded"),
+#   matches("sr_19a_contacting_officials__parents"),
+#   matches("sr_20a_rolemodels_parents"),
+#   matches("sr_22a_expect_contact_parents"),
+#   matches("sr_7_believe_about_climate_change"),
+#   matches("sr_11_harm_future_generations"),
+#   matches("sr_21a_effective_actions_contacting_officials"),
+#   matches("sr_30_easy_to_call"),
+#   matches("sr_31_able_to_call"),
+#   matches("sr_41a_right_to_modify"),
+#   matches("sr_41b_laws_of_nature"),
+#   matches("sr_41c_ingenuity"),
+#   matches("sr_41d_impotent"),
+#   matches("sr_41e_govt_do_more"),
+#   matches("sr_41f_equity"),
+#   matches("sr_56_marital_status"),
+#   matches("sr_61_education"),
+#   matches("sr_71_employment_status"),
+#   matches("sr_72_income"),
+#   matches("sr_75b_religious"),
+#   matches("sr_78_political_affiliation"),
+#   matches("sr_79_political_leaning")
+# )
+# p_missing <- unlist(lapply(OLRorigvarsmissing, function(x) sum(is.na(x))))/nrow(d_accept)
+# sort(p_missing[p_missing > 0], decreasing = TRUE)
+
+
+# # Checking missing values in all original vars that went into factor analysis and subsequently into composite variables.
+# 
+# OLRcompvarsmissing <- d_accept %>% dplyr::select(
+#   matches("sr_24_past_contact"),
+#   matches("sr_25_future_contact"),
+#   
+#   matches("sr_19b_contacting_officials_spouse"),
+#   matches("sr_19c_contacting_officials_children"),
+# 
+#   matches("sr_19d_contacting_officials_otherfamily"),
+#   matches("sr_19e_contacting_officials_friends"),
+#   matches("sr_19f_contacting_officials_coworkers"),
+#   matches("sr_19g_contacting_officials_recpartners"),
+#   matches("sr_19h_contacting_officials_faithcommun"),
+# 
+#   matches("sr_20b_rolemodels_spouse"),
+#   matches("sr_20c_rolemodels_children"),
+# 
+#   matches("sr_20d_rolemodels_otherfamily"),
+#   matches("sr_20e_rolemodels_friends"),
+#   matches("sr_20f_rolemodels_coworkers"),
+#   matches("sr_20g_rolemodels_recpartners"),
+#   matches("sr_20h_rolemodels_faithcommun"),
+# 
+#   matches("sr_22b_expect_contact_spouse"),
+#   matches("sr_22c_expect_contact_children"),
+# 
+#   matches("sr_22d_expect_contact_otherfamily"),
+#   matches("sr_22e_expect_contact_friends"),
+#   matches("sr_22f_expect_contact_coworkers"),
+#   matches("sr_22g_expect_contact_recpartners"),
+#   matches("sr_22h_expect_contact_faithcommun"),
+# 
+#   matches("sr_23a_motivated_to_comply_parents"),
+#   matches("sr_23b_motivated_to_comply_spouse"),
+#   matches("sr_23c_motivated_to_comply_children"),
+# 
+#   matches("sr_23d_motivated_to_comply_otherfamily"),
+#   matches("sr_23e_motivated_to_comply_friends"),
+#   matches("sr_23f_motivated_to_comply_coworkers"),
+#   matches("sr_23g_motivated_to_comply_recpartners"),
+#   matches("sr_23h_motivated_to_comply_faithcommun"),
+# 
+#   matches("sr_16_hear_friends_talk"),
+#   matches("sr_17_hear_media"),
+#   matches("sr_18_hear_public_officials"),
+# 
+#   matches("sr_3b_importance_climatechange"),
+#   matches("sr_8_importance_personally"),
+#   matches("sr_9_worried"),
+#   matches("sr_10_harm_you_personally"),
+# 
+#   matches("sr_29a_effective_fed"),
+#   matches("sr_29b_effective_state"),
+#   matches("sr_29c_effective_business"),
+#   matches("sr_29d_effective_ngo"),
+# 
+#   matches("sr_27a_competent_fed"),
+#   matches("sr_27b_competent_state"),
+#   matches("sr_27c_competent_business"),
+#   matches("sr_28a_responsive_fed"),
+#   matches("sr_28b_responsive_state"),
+#   matches("sr_28c_responsive_business"),
+# 
+#   matches("sr_27d_competent_ngo"),
+#   matches("sr_28d_responsive_ngo"),
+# 
+#   matches("sr_38_contact_admirable"),
+#   matches("sr_39_contact_good"),
+# 
+#   matches("sr_32_contact_useful"),
+#   matches("sr_33_contact_pleasant"),
+#   matches("sr_37_contact_foolish"),
+# 
+#   matches("sr_34_contact_cool"),
+#   matches("sr_35_contact_easy"),
+#   matches("sr_36_contact_exciting"))
+# p_missing <- unlist(lapply(OLRcompvarsmissing, function(x) sum(is.na(x))))/nrow(d_accept)
+# sort(p_missing[p_missing > 0], decreasing = TRUE)
+
+```
+
+## Outline
+This document serves two functions: as Nate's detailed reference for steps and assumptions taken during analysis, and more broadly to communicate the analysis findings to advisors. Feel free to skip granular sections as needed.   
+
+The analysis seeks to answer my thesis research questions:  
+  
+RQ1: Which explanatory variables from a variety of studies and theories are most strongly associated with climate activism, specifically the action of contacting elected officials?   
+  
+RQ2: How might we define behaviorally oriented segments and which segments are specifically related to the climate change activism behavior “contacting elected officials”?
+
+Table of contents:  
+1) Varible renaming, cleanup, listwise deletion  
+2) EDA & description of categorical variables levels reduction  
+3) Factor analysis & composite variables creation  
+4) OLR model  
+5) Discussion of OLR results 
+
+Alex - per your suggestion I went back in and reduced several of the groups that were at four factors down to two factors. We lose a little bit in the amount of cumulative variance explained, but doing that seems to help the factors hang together even more reliably, and also had the side benefit of aligning all the factors for the descriptive and injunctive social norms: both now break down into two factors: "spouse & children" and all others: "parents, otherfamily, friends, coworkers, recreationpartners, faithcommunity"  
+
+
+## Variable renaming, cleanup, listwise deletion
+```{r eval=T, echo=T, include=T}
+# rename 19a parents var b/c it's misspelled
+d_accept <- rename(d_accept, sr_19a_contacting_officials_parents = sr_19a_contacting_officials__parents)
+
+# rename 37_foolish to _sensible to align with other wordings in this group (q32-39).
+d_accept <- rename(d_accept, sr_37_contact_sensible = sr_37_contact_foolish)
+
+# Change the obviously erroneous value of 99 dependents to NA
+d_accept <- d_accept %>% 
+    mutate(sr_57i_dependents = na_if(sr_57i_dependents, 99))  
+
+# Create new variable w/ correct age calculated
+d_accept <- d_accept %>% 
+  mutate(age_true = 2020-year_born)
+
+# Remove everyone under 18 years of age
+d_accept <- subset(d_accept, age_true>=18)
+
+# Convert RV (12a) past contact to a factor and assign labels
+d_accept$sr_12a_actions_contacted_officials <- factor(d_accept$sr_12a_actions_contacted_officials, ordered=TRUE, levels <- c(1, 2, 3))
+d_accept$sr_12a_actions_contacted_officials <- recode_factor(d_accept$sr_12a_actions_contacted_officials, "1"="nocontact", "2"="once", "3"="moreonce")
+
+# Reverse code several variables so that the answer options make sense quantitatively
+# 3, 8, 9, 10, 11, 24, 25, 26
+d_accept <- d_accept %>% 
+  mutate(sr_3b_importance_climatechange_reversed = car::recode(sr_3b_importance_climatechange, "1=5 ; 2=4 ; 3=3 ; 4=2 ; 5=1"),
+         sr_8_importance_personally_reversed = car::recode(sr_8_importance_personally, "1=5 ; 2=4 ; 3=3 ; 4=2 ; 5=1"),
+         sr_9_worried_reversed = car::recode(sr_9_worried, "1=4 ; 2=3 ; 3=2 ; 4=1"),
+         sr_10_harm_you_personally_reversed = car::recode(sr_10_harm_you_personally, "1=4 ; 2=3 ; 3=2 ; 4=1"),
+         sr_24_past_contact_reversed = car::recode(sr_24_past_contact, "1=5 ; 2=4 ; 3=3 ; 4=2 ; 5=1"),
+         sr_25_future_contact_reversed = car::recode(sr_25_future_contact, "1=5 ; 2=4 ; 3=3 ; 4=2 ; 5=1"),
+         sr_26_identity_reversed = car::recode(sr_26_identity, "1=5 ; 2=4 ; 3=3 ; 4=2 ; 5=1"))
+
+# Change all "don't know" or "don't know / does not apply" answers to NA
+d_accept <- d_accept %>% 
+  dplyr::mutate(
+    sr_10_harm_you_personally = na_if(sr_10_harm_you_personally, 5),
+    sr_11_harm_future_generations = na_if(sr_11_harm_future_generations, 5),
+    sr_19a_contacting_officials_parents = na_if(sr_19a_contacting_officials_parents, 5),
+    sr_19b_contacting_officials_spouse = na_if(sr_19b_contacting_officials_spouse, 5),
+    sr_19c_contacting_officials_children = na_if(sr_19c_contacting_officials_children, 5),
+    sr_19d_contacting_officials_otherfamily = na_if(sr_19d_contacting_officials_otherfamily, 5),
+    sr_19e_contacting_officials_friends = na_if(sr_19e_contacting_officials_friends, 5),
+    sr_19f_contacting_officials_coworkers = na_if(sr_19f_contacting_officials_coworkers, 5),
+    sr_19g_contacting_officials_recpartners = na_if(sr_19g_contacting_officials_recpartners, 5),
+    sr_19h_contacting_officials_faithcommun = na_if(sr_19h_contacting_officials_faithcommun, 5),
+    sr_20a_rolemodels_parents = na_if(sr_20a_rolemodels_parents, 5),
+    sr_20b_rolemodels_spouse = na_if(sr_20b_rolemodels_spouse, 5),
+    sr_20c_rolemodels_children = na_if(sr_20c_rolemodels_children, 5),
+    sr_20d_rolemodels_otherfamily = na_if(sr_20d_rolemodels_otherfamily, 5),
+    sr_20e_rolemodels_friends = na_if(sr_20e_rolemodels_friends, 5),
+    sr_20f_rolemodels_coworkers = na_if(sr_20f_rolemodels_coworkers, 5),
+    sr_20g_rolemodels_recpartners = na_if(sr_20g_rolemodels_recpartners, 5),
+    sr_20h_rolemodels_faithcommun = na_if(sr_20h_rolemodels_faithcommun, 5),
+    sr_22a_expect_contact_parents = na_if(sr_22a_expect_contact_parents, 5),
+    sr_22b_expect_contact_spouse = na_if(sr_22b_expect_contact_spouse, 5),
+    sr_22c_expect_contact_children = na_if(sr_22c_expect_contact_children, 5),
+    sr_22d_expect_contact_otherfamily = na_if(sr_22d_expect_contact_otherfamily, 5),
+    sr_22e_expect_contact_friends = na_if(sr_22e_expect_contact_friends, 5),
+    sr_22f_expect_contact_coworkers = na_if(sr_22f_expect_contact_coworkers, 5),
+    sr_22g_expect_contact_recpartners = na_if(sr_22g_expect_contact_recpartners, 5),
+    sr_22h_expect_contact_faithcommun = na_if(sr_22h_expect_contact_faithcommun, 5),
+    sr_23a_motivated_to_comply_parents = na_if(sr_23a_motivated_to_comply_parents, 5),
+    sr_23b_motivated_to_comply_spouse = na_if(sr_23b_motivated_to_comply_spouse, 5),
+    sr_23c_motivated_to_comply_children = na_if(sr_23c_motivated_to_comply_children, 5),
+    sr_23d_motivated_to_comply_otherfamily = na_if(sr_23d_motivated_to_comply_otherfamily, 5),
+    sr_23e_motivated_to_comply_friends = na_if(sr_23e_motivated_to_comply_friends, 5),
+    sr_23f_motivated_to_comply_coworkers = na_if(sr_23f_motivated_to_comply_coworkers, 5),
+    sr_23g_motivated_to_comply_recpartners = na_if(sr_23g_motivated_to_comply_recpartners, 5),
+    sr_23h_motivated_to_comply_faithcommun = na_if(sr_23h_motivated_to_comply_faithcommun, 5))
+
+```
+
+```{r new variables, eval=T, echo=F, include=F}
+# Creating new variables where needed
+
+# RACE
+# Create race_present variable. Gives a "1" if race of any kind was entered, and an NA if not. 
+d_accept <- d_accept %>%
+  mutate(race_present_dumvar = ifelse(sr_74_1_race_white==1 | sr_74_2_race_black==2 | sr_74_3_race_hispanic==3 | sr_74_4_race_native_american==4 | sr_74_5_race_east_asian==5 | sr_74_6_race_middle_eastern==6 | sr_74_7_race_south_asian==7,1,0))
+# Gives us 1 where race_white==1, and NA if otherwise
+d_accept <- d_accept %>% 
+  mutate(race_white_dumvar = ifelse(sr_74_1_race_white==1,1,NA))         
+# Replace all instances of NA with zero. This will now grab all instances of "race_other" with zero, but also rows where race isn't present. 
+d_accept$race_white_dumvar[is.na(d_accept$race_white_dumvar)] <-0
+# Lastly filter out rows where respondent truly skipped the question. For column "race_white_dumvar", replace any value (will be 0 or 1) with NA for any row where "race_present_dumvar" is NA. Which leaves us with 1=="white" and 0=="other"
+d_accept$race_white_dumvar[is.na(d_accept$race_present_dumvar)] <- d_accept$race_present_dumvar[is.na(d_accept$race_present_dumvar)] 
+d_accept$race_white_dumvar <- recode_factor(d_accept$race_white_dumvar, "1"="race_white", "0"="race_other")
+
+# GENDER
+# Turn Gender variable into only two factors: male and female. "Other" and "prefer not to answer" get turned into NA and dropped. 
+d_accept <- d_accept %>%
+  mutate(gender_dumvar = factor(d_accept$gender, ordered=FALSE))
+d_accept$gender_dumvar <- recode_factor(d_accept$gender, "1"="female", "2"="male")
+levels(d_accept$gender_dumvar)[levels(d_accept$gender_dumvar)=="3"] <- NA
+levels(d_accept$gender_dumvar)[levels(d_accept$gender_dumvar)=="4"] <- NA
+
+# CHILDREN
+# Dummy var for any respondent w children of any age
+d_accept <- d_accept %>% 
+  mutate(children_dumvar = ifelse(d_accept$sr_57j_adultchildren>=1 | d_accept$sr_57i_dependents>=1,1,0))
+d_accept$children_dumvar <- recode_factor(d_accept$children_dumvar, "1"="children", "0"="nochildren")
+
+# RELIGION
+# Original levels:
+# d_accept$sr_75_religion <- recode_factor(d_accept$sr_75_religion, "1"="catholic", "2"="main_protestant", "3"="evangelical", "4"="oth_christian", "5"="mormon", "6"="unitarian", "7"="jewish", "8"="muslim", "9"="hindu", "10"="buddhist", "11"="oth_nonchristian", "12"="spiritual", "13"="atheist", "14"="agnostic", "0"="other")
+d_accept <- d_accept %>% 
+  mutate(sr_75_religion_dumvar = factor(d_accept$sr_75_religion, ordered=FALSE))
+d_accept$sr_75_religion_dumvar <- recode_factor(d_accept$sr_75_religion, "1"="religious", "2"="religious", "3"="religious", "4"="religious", "5"="religious", "6"="religious", "7"="religious", "8"="religious", "9"="religious", "10"="religious", "11"="religious", "12"="notreligious", "13"="notreligious", "14"="notreligious", "0"="notreligious")
+```
+
+## Factor Analysis
+$$\\[.05in]$$
+### Dynamic Norms
+*"Do you think that over the PAST/NEXT 12 months the percentage of adults in the United States who contacted elected officials to urge them to take action to reduce global warming is..."*   
+
+One factor solution:   
+1. Two-item factor consisting of the two dynamic norms questions (changes in the number of ppl contacting reps in the past and future)
+```{r, eval=T, echo=F, warning=F}
+res <- cor.test(d_accept$sr_24_past_contact,d_accept$sr_25_future_contact, method = "spearman")
+print(res)
+
+# Create composite variable
+d_accept <- d_accept %>% 
+  mutate(
+    descdynamicnorms_comp = rowMeans(subset(d_accept[, c("sr_24_past_contact", "sr_25_future_contact")], na.rm=T)))
+
+test <- d_accept %>% 
+  dplyr::select(descdynamicnorms_comp, sr_24_past_contact, sr_25_future_contact)
+```
+Correlation test of the two dynamic norms items shows moderate positive correlation, with Spearman's rho of `r res$estimate` and p-value of `r res$p.value`.
+
+$$\\[.05in]$$
+
+### Descriptive Norms (contact)
+*"To what extent do you think that the following people ARE CONTACTING (writing letters, emailing, or calling) their elected representatives in Congress to urge action on reducing climate change?"*
+
+One factor solution (81% cumulative variance (hereafter: cv))   
+1. All
+
+```{r, eval=T, echo=F}
+d_pca_descriptivecontactnorms <- d_accept %>% 
+  dplyr::select(
+  matches("sr_19a_contacting_officials_parents"),
+  matches("sr_19b_contacting_officials_spouse"),
+  matches("sr_19c_contacting_officials_children"),
+  matches("sr_19d_contacting_officials_otherfamily"),
+  matches("sr_19e_contacting_officials_friends"),
+  matches("sr_19f_contacting_officials_coworkers"),
+  matches("sr_19g_contacting_officials_recpartners"),
+  matches("sr_19h_contacting_officials_faithcommun"))
+  
+fa.parallel(d_pca_descriptivecontactnorms, fm='minres', fa='fa')
+pca1 <- fa(d_pca_descriptivecontactnorms, nfactors = 1, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+
+```
+
+#### Descriptive Norms (contact) - 1st factor (Fam & non-fam) - Cronbach Alpha
+```{r, eval=T, echo=F, include=F}
+d_pca_descriptivecontactnorms_all <- d_accept %>% 
+  dplyr::select(
+    matches("sr_19a_contacting_officials_parents"),
+    matches("sr_19b_contacting_officials_spouse"),
+    matches("sr_19c_contacting_officials_children"),
+    matches("sr_19d_contacting_officials_otherfamily"),
+    matches("sr_19e_contacting_officials_friends"),
+    matches("sr_19f_contacting_officials_coworkers"),
+    matches("sr_19g_contacting_officials_recpartners"),
+    matches("sr_19h_contacting_officials_faithcommun"))
+
+psych::alpha(d_pca_descriptivecontactnorms_all, use ="pairwise") 
+```
+.97 alpha indicates strong reliability. Decreases if any are dropped. 
+
+
+```{r, eval=T, echo=T, include=F}
+# Create  new comp variable
+d_accept <- d_accept %>% 
+  mutate(
+    desccontactnorms_all_comp = rowMeans(d_accept[, c("sr_19a_contacting_officials_parents", "sr_19b_contacting_officials_spouse", "sr_19c_contacting_officials_children", "sr_19d_contacting_officials_otherfamily", "sr_19e_contacting_officials_friends", "sr_19f_contacting_officials_coworkers", "sr_19g_contacting_officials_recpartners", "sr_19h_contacting_officials_faithcommun")], na.rm=T))
+    
+# Check to see if the code works correctly
+# test <- d_accept %>% 
+#   dplyr::select(desccontactnorms_all_comp, sr_19a_contacting_officials_parents, sr_19b_contacting_officials_spouse, sr_19c_contacting_officials_children, sr_19d_contacting_officials_otherfamily, sr_19e_contacting_officials_friends, sr_19f_contacting_officials_coworkers, sr_19g_contacting_officials_recpartners, sr_19h_contacting_officials_faithcommun)
+    
+```
+
+$$\\[.05in]$$
+
+# 11/23 START HERE WITH ROLE MODELS
+
+### Descriptive Norms (role models)
+*"How likely are you to consider each of these groups as behavioral role models?"*
+
+Scree plot suggests four factors (78% cv), but two factor solution makes the most sense.   
+Two factor solution (68% cv):   
+1. 2-item composite variable: Spouse, Children   
+2. Multi-item composite variable: parents, otherfam, friends, cowork, recpartners, faithcomm
+
+```{r eval=TRUE, echo=F}
+d_pca_descriptiverolemodelnorms <- d_accept %>% 
+  dplyr::select(
+    matches("sr_20a"),
+    matches("sr_20b"),
+    matches("sr_20c"),
+    matches("sr_20d"),
+    matches("sr_20e"),
+    matches("sr_20f"),
+    matches("sr_20g"),
+    matches("sr_20h"))
+    
+# 2
+fa.parallel(d_pca_descriptiverolemodelnorms, fm='minres', fa='fa')
+pca1 <- fa(d_pca_descriptiverolemodelnorms, nfactors = 2, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+
+# # 4
+# fa.parallel(d_pca_descriptiverolemodelnorms, fm='minres', fa='fa')
+# pca1 <- fa(d_pca_descriptiverolemodelnorms, nfactors = 4, rotate = "Varimax", fm="minres") 
+# print(pca1)
+# print(pca1$loadings,cutoff = 0.3) 
+```
+
+#### Descriptive Norms (role models) - 1st factor (Spouse & Children) - Correlation
+```{r, eval=T, echo=F}
+res <- cor.test(OLR_complete_cases$sr_20b_rolemodels_spouse,OLR_complete_cases$sr_20c_rolemodels_children, method = "spearman", exact=FALSE)
+print(res)
+```
+Correlation test of the two descriptive norms items for Spouse and Children, showing moderate positive correlation. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
+
+#### Descriptive Norms (role models) - 2nd factor (parents, otherfam, friends, cowork, recpartners, faithcomm) - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_descriptivecontactnorms_other <- OLR_complete_cases %>% dplyr::select(
+    matches("sr_20a_rolemodels_parents"),
+    matches("sr_20d_rolemodels_otherfamily"),
+    matches("sr_20e_rolemodels_friends"),
+    matches("sr_20f_rolemodels_coworkers"),
+    matches("sr_20g_rolemodels_recpartners"),
+    matches("sr_20h_rolemodels_faithcommun"))
+
+psych::alpha(d_pca_descriptivecontactnorms_other, use ="pairwise") 
+```
+Alpha of .91 shows strong reliability, with no significant improvement found by dropping any items. 
+
+```{r, eval=T, echo=F, include=F}
+# Create two comp variables
+OLR_complete_cases <- OLR_complete_cases %>% 
+  mutate(
+    descrolemodelnorms_spouse_child_comp = rowMeans(subset(OLR_complete_cases, select = c(sr_20b_rolemodels_spouse, sr_20c_rolemodels_children))),
+    descrolemodelnorms_other_comp = rowMeans(subset(OLR_complete_cases, select = c(sr_20a_rolemodels_parents, sr_20d_rolemodels_otherfamily, sr_20e_rolemodels_friends, sr_20f_rolemodels_coworkers, sr_20g_rolemodels_recpartners, sr_20h_rolemodels_faithcommun))))
+```
+
+
+$$\\[.05in]$$
+### Injunctive Norms (contact) 
+*"To what extent do you think that the following people EXPECT YOU to contact (writing letters, emailing, or calling) your elected representatives to urge action on reducing climate change?"*
+
+Scree plot suggests four factors (78% cv) but two (69% cv) makes the most sense.     
+Two-factor solution:   
+1. 2-item composite variable: Spouse, Children   
+2. Multi-item composite variable: parents, otherfam, friends, cowork, recpartners, faithcomm
+
+```{r, eval=T, echo=F}
+d_pca_injunctivecontactnorms <- OLR_complete_cases %>% 
+  dplyr::select(
+    matches("sr_22a"),
+    matches("sr_22b"),
+    matches("sr_22c"),
+    matches("sr_22d"),
+    matches("sr_22e"),
+    matches("sr_22f"),
+    matches("sr_22g"),
+    matches("sr_22h"))
+
+# 2
+fa.parallel(d_pca_injunctivecontactnorms, fm='minres', fa='fa')
+pca1 <- fa(d_pca_injunctivecontactnorms, nfactors = 2, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+
+# # 4
+# fa.parallel(d_pca_injunctivecontactnorms, fm='minres', fa='fa')
+# pca1 <- fa(d_pca_injunctivecontactnorms, nfactors = 4, rotate = "Varimax", fm="minres") 
+# print(pca1)
+# print(pca1$loadings,cutoff = 0.3)
+```
+
+#### Injunctive Norms (contact) - 1st factor (Spouse & Children) - Correlation
+```{r, eval=T, echo=F}
+res <- cor.test(OLR_complete_cases$sr_22b_expect_contact_spouse,OLR_complete_cases$sr_22c_expect_contact_children, method = "spearman", exact=FALSE)
+print(res)
+```
+Correlation test of the two descriptive norms items for Spouse and Children, showing moderate positive correlation. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
+
+#### Injunctive Norms (contact) - 2nd factor (parents, otherfam, friends, cowork, recpartners, faithcomm) - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_injunctivecontactnorms_other <- OLR_complete_cases %>% 
+  dplyr::select(
+    matches("sr_22a_expect_contact_parents"),
+    matches("sr_22d"),
+    matches("sr_22e"),
+    matches("sr_22f"),
+    matches("sr_22g"),
+    matches("sr_22h"))
+
+psych::alpha(d_pca_injunctivecontactnorms_other, use ="pairwise") 
+```
+.91 alpha shows high reliability. Dropping any items decreases the alpha. 
+
+```{r, eval=T, echo=F, include=F}
+# Create two comp variables
+OLR_complete_cases <- OLR_complete_cases %>% 
+  mutate(
+    injunctcontactnorms_spouse_child_comp = rowMeans(subset(OLR_complete_cases, select = c(sr_22b_expect_contact_spouse, sr_22c_expect_contact_children))),
+    injunctcontactnorms_other_comp = rowMeans(subset(OLR_complete_cases, select = c(sr_22a_expect_contact_parents, sr_22d_expect_contact_otherfamily, sr_22e_expect_contact_friends, sr_22f_expect_contact_coworkers, sr_22g_expect_contact_recpartners, sr_22h_expect_contact_faithcommun))))
+```
+$$\\[.05in]$$
+### Injunctive Norms (motivation)
+*"How motivated are you to comply with the expectations of each of these people?"*
+
+Two factor solution (69% cv)    
+1. Two-item composite variable: Spouse, Children   
+2. Multi-item composite variable: parents, Otherfam, Friends, Cowork, Recpartners, Faith
+
+```{r, eval=T, echo=F}
+d_pca_injunctivemotivation <- OLR_complete_cases %>% 
+  dplyr::select(
+    matches("sr_23a"),
+    matches("sr_23b"),
+    matches("sr_23c"),
+    matches("sr_23d"),
+    matches("sr_23e"),
+    matches("sr_23f"),
+    matches("sr_23g"),
+    matches("sr_23h"))
+
+fa.parallel(d_pca_injunctivemotivation, fm='minres', fa='fa')
+pca1 <- fa(d_pca_injunctivemotivation, nfactors = 2, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+#### Injunctive Norms (motivation) - 1st factor (Spouse & children ) - Cronbach Alpha
+```{r, eval=T, echo=F}
+res <- cor.test(OLR_complete_cases$sr_23b_motivated_to_comply_spouse,OLR_complete_cases$sr_23c_motivated_to_comply_children, method = "spearman", exact=FALSE)
+print(res)
+```
+Correlation test of the two injunctive motivation norms items for Spouse and Children, showing moderate positive correlation. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.
+
+#### Injunctive Norms (motivation) - 2nd factor (parents, otherfam, friends, cowork, recpartners, faithcomm) - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_injunctivemotivationnon_other <- OLR_complete_cases %>% 
+  dplyr::select(
+    matches("sr_23a_motivated_to_comply_parents"),
+    matches("sr_23d_motivated_to_comply_otherfamily"),
+    matches("sr_23e_motivated_to_comply_friends"),
+    matches("sr_23f_motivated_to_comply_coworkers"),
+    matches("sr_23g_motivated_to_comply_recpartners"),
+    matches("sr_23h_motivated_to_comply_faithcommun"))
+
+psych::alpha(d_pca_injunctivemotivationnon_other, use ="pairwise") 
+```
+.91 alpha shows strong reliabiity; no increase with dropping any items.  
+
+```{r, eval=T, echo=F, include=F}
+# Create two comp variables
+OLR_complete_cases <- OLR_complete_cases %>% 
+  mutate(
+    injunctmotivation_spouse_child_comp = rowMeans(subset(OLR_complete_cases, select = c(sr_23b_motivated_to_comply_spouse,sr_23c_motivated_to_comply_children))),
+    injunctmotivation_other_comp = rowMeans(subset(OLR_complete_cases, select = c(sr_23a_motivated_to_comply_parents, sr_23d_motivated_to_comply_otherfamily, sr_23e_motivated_to_comply_friends, sr_23f_motivated_to_comply_coworkers, sr_23g_motivated_to_comply_recpartners, sr_23h_motivated_to_comply_faithcommun))))
+```
+
+
+$$\\[.05in]$$
+
+### CIM - Benefits
+*"How often do you hear ____ talk about the importance of reducing climate change?"*   
+*[your friends, family, and coworkers]*   
+*[public figures whom you respect]*   
+*[about the importance of reducing climate change in the media? (TV, movies, radio, newspapers/news websites, magazines, etc.)]*
+
+One-factor solution:   
+1. Multi-item composite variable: F/Fam/Cowork, Public Figures, Media
+
+```{r, eval=T, echo=F}
+d_pca_CIMbenefits <- OLR_complete_cases %>% 
+  dplyr::select(
+    matches("sr_16"),
+    matches("sr_17"),
+    matches("sr_18"))
+
+fa.parallel(d_pca_CIMbenefits, fm='minres', fa='fa')
+pca1 <- fa(d_pca_CIMbenefits, nfactors = 1, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+#### CIM - Benefits - Cronbach Alpha
+```{r, eval=T, echo=F}
+psych::alpha(d_pca_CIMbenefits, use ="pairwise", na.rm = TRUE) 
+
+# Create comp variable
+OLR_complete_cases <- OLR_complete_cases %>% 
+  mutate(
+    cimbenefits_comp = rowMeans(subset(OLR_complete_cases, select = c(sr_16_hear_friends_talk, sr_17_hear_media, sr_18_hear_public_officials))))
+```
+.79 alpha indicates good reliability; no increase with dropping any of the three items. 
+
+$$\\[.05in]$$
+### CIM - Perceived Risk
+*"How important is each of the following issues to you today?"*   
+*"How important is the issue of climate change to you personally?"*   
+*"How worried are you about climate change?"*   
+*"How much do you think climate change will harm you personally?"*   
+*"How much do you think climate change will harm future generations of people?"*
+
+
+Two-factor solution   
+1. Multi-item composite variable: CC importance as an issue, CC personal importance, CC worry, belief of personal harm from CC    
+2. 1-item variable: belief of harm to future generations from CC
+
+```{r, eval=T, echo=F}
+d_pca_CIMperceivedrisk <- OLR_complete_cases %>% 
+  dplyr::select(
+    matches("sr_3b_importance_climatechange"),
+    matches("sr_8_importance_personally"),
+    matches("sr_9_worried"),
+    matches("sr_10_harm_you_personally"),
+    matches("sr_11_harm_future_generations"))
+
+fa.parallel(d_pca_CIMperceivedrisk, fm='minres', fa='fa')
+pca1 <- fa(d_pca_CIMperceivedrisk, nfactors = 2, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+#### CIM - Perceived Risk - 1st factor (Personal) - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_CIMperceivedriskpersonal <- OLR_complete_cases %>% 
+  dplyr::select(
+    matches("sr_3b_importance_climatechange"),
+    matches("sr_8_importance_personally"),
+    matches("sr_9_worried"),
+    matches("sr_10_harm_you_personally"))
+
+psych::alpha(d_pca_CIMperceivedriskpersonal, use ="pairwise") 
+```
+"#10 Harm you personally" loads onto the second factor slightly more than here in the first, but it's not by much, it makes intuitively more sense for it to be here in the first factor with the other more individually-focused questions, and it shows good reliability within this factor. 
+
+#### CIM - Perceived Risk - 2nd factor - sr_11_harm_future_generations
+```{r, eval=F, echo=F, include=F}
+describe(OLR_complete_cases$sr_11_harm_future_generations)
+```
+
+```{r, eval=T, echo=F, include=F}
+# Create single composite variable
+OLR_complete_cases <- OLR_complete_cases %>% 
+  mutate(
+    cimperceivedrisk_comp = rowMeans(subset(OLR_complete_cases, select = c(sr_3b_importance_climatechange, sr_8_importance_personally, sr_9_worried, sr_10_harm_you_personally))))
+```
+
+$$\\[.05in]$$
+### Efficacy
+*"Below is a list of actions that individuals could take to reduce climate change. If YOU took these actions, how effective would each be for reducing climate change?"*   
+*"Below are some public and private organizations who make decisions that have an impact on climate change. In general, how COMPETENT is each in addressing climate change?"*   
+*"In general, how RESPONSIVE is each in addressing climate change?"*   
+*"How much do you agree that each type of organization is generally IN A POSITION TO EFFECTIVELY reduce climate change?"* 
+
+Three-factor solution (61% cv):   
+1. 1-item variable: 21a: Is contacting elected reps an effective action?  
+2. Multi-item composite variable: All types (fed, state, business, ngo) are in a position to effect change   
+3. Multi-item composite variable: All types' (fed, state, business, ngo) competency and responsiveness   
+
+```{r, eval=T, echo=F}
+d_pca_efficacygroup <- OLR_complete_cases %>% 
+  dplyr::select(
+    matches("sr_27[a-d]"),
+    matches("sr_28[a-d]"),
+    matches("sr_29[a-d]"))
+
+fa.parallel(d_pca_efficacygroup, fm='minres', fa='fa')
+pca1 <- fa(d_pca_efficacygroup, nfactors = 2, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+```
+
+#### Efficacy - 1st variable (is contacting elected officials an effective action?)
+```{r, eval=T, echo=F, include=F}
+describe(OLR_complete_cases$sr_21a_effective_actions_contacting_officials)
+```
+
+#### Efficacy - 2nd Factor (All types' ability to effect change) - Cronbach Alpha 
+```{r, eval=T, echo=F}
+d_pca_efficacyeffectchange_all <- OLR_complete_cases %>% 
+  dplyr::select(
+    matches("sr_29[a-d]"))
+
+psych::alpha(d_pca_efficacyeffectchange_all, use ="pairwise") 
+```
+.93 alpha shows strong reliability, and it decreases when any items are dropped. 
+
+#### Efficacy - 3rd Factor (all types' competency & responsiveness) - Cronbach Alpha 
+```{r, eval=T, echo=F}
+d_pca_efficacycompetencyresponsive_all <- OLR_complete_cases %>% 
+  dplyr::select(
+    matches("sr_27[a-d]"),
+    matches("sr_28[a-d]"))
+
+psych::alpha(d_pca_efficacycompetencyresponsive_all, use ="pairwise") 
+```
+.88 alpha shows strong reliability, and it decreases when any items are dropped. 
+
+```{r, eval=T, echo=F, include=F}
+# Create two comp variables
+OLR_complete_cases <- OLR_complete_cases %>% 
+  mutate(
+    efficacy_effectiveness_all_comp = rowMeans(subset(OLR_complete_cases, select = c(sr_29a_effective_fed, sr_29b_effective_state, sr_29c_effective_business, sr_29d_effective_ngo))),
+    efficacy_competresp_all_comp = rowMeans(subset(OLR_complete_cases, select = c(sr_27a_competent_fed, sr_27b_competent_state, sr_27c_competent_business, sr_27d_competent_ngo, sr_28a_responsive_fed, sr_28b_responsive_state, sr_28c_responsive_business, sr_28d_responsive_ngo))))
+```
+
+$$\\[.05in]$$
+### TPB Behavioral Attitude
+*"For me, contacting (writing letters, emailing, phoning my elected representatives in Congress to urge action on climate change on a regular basis during the next year would be …"*
+
+Three-factor solution:   
+1. 2-item variable: admirable/shameful, good/bad   
+2. Multi-item composite variable: useful/useless, pleasant/intimidating, sensible/foolish  
+3. Multi-item composite variable: cool/uncool, easy/awkward, exciting/boring   
+```{r, eval=T, echo=F}
+# Reverse 34, 35, 36, 38, 39 so a higher number indicates something good, in line with the structure of the rest of the survey answers. 
+# now 6=cool and 1=uncool
+OLR_complete_cases <- OLR_complete_cases %>% 
+  mutate(sr_34_contact_cool_reversed = car::recode(sr_34_contact_cool, "1=6 ; 2=5 ; 3=4 ; 4=3 ; 5=2 ; 6=1")) 
+# now 6=easy and 1=awkward
+OLR_complete_cases <- OLR_complete_cases %>% 
+  mutate(sr_35_contact_easy_reversed = car::recode(sr_35_contact_easy, "1=6 ; 2=5 ; 3=4 ; 4=3 ; 5=2 ; 6=1"))
+# now 6=exciting and 1=boring
+OLR_complete_cases <- OLR_complete_cases %>%
+  mutate(sr_36_contact_exciting_reversed = car::recode(sr_36_contact_exciting, "1=6 ; 2=5 ; 3=4 ; 4=3 ; 5=2 ; 6=1"))
+# now 6=admirable and 1=shameful
+OLR_complete_cases <- OLR_complete_cases %>%
+  mutate(sr_38_contact_admirable_reversed = car::recode(sr_38_contact_admirable, "1=6 ; 2=5 ; 3=4 ; 4=3 ; 5=2 ; 6=1"))
+# now 6=good and 1=bad
+OLR_complete_cases <- OLR_complete_cases %>%
+  mutate(sr_39_contact_good_reversed = car::recode(sr_39_contact_good, "1=6 ; 2=5 ; 3=4 ; 4=3 ; 5=2 ; 6=1"))
+
+ba2 <- OLR_complete_cases %>%
+  dplyr::select(
+    matches("sr_32_contact_useful"),
+    matches("sr_33_contact_pleasant"),
+    matches("sr_34_contact_cool_reversed"),
+    matches("sr_35_contact_easy_reversed"),
+    matches("sr_36_contact_exciting_reversed"),
+    matches("sr_37_contact_sensible"),
+    matches("sr_38_contact_admirable_reversed"),
+    matches("sr_39_contact_good_reversed"))
+
+fa.parallel(ba2, fm='minres', fa='fa')
+pca1 <- fa(ba2, nfactors = 3, rotate = "Varimax", fm="minres") 
+print(pca1)
+print(pca1$loadings,cutoff = 0.3)
+
+# PCA with original, non-reversed variables, if needed. 
+# d_pca_behavioralattitude <- OLR_complete_cases %>% 
+#   dplyr::select(
+#     matches("sr_32"),
+#     matches("sr_33"),
+#     matches("sr_34"),
+#     matches("sr_35"),
+#     matches("sr_36"),
+#     matches("sr_37"),
+#     matches("sr_38"),
+#     matches("sr_39"))
+# summary(d_pca_behavioralattitude)
+# fa.parallel(d_pca_behavioralattitude, fm='minres', fa='fa')
+# pca1 <- fa(d_pca_behavioralattitude, nfactors = 3, rotate = "Varimax", fm="minres") 
+# print(pca1)
+# print(pca1$loadings,cutoff = 0.3)
+```
+
+#### TPB Behavioral Attitude - 1st factor - Correlation
+```{r, eval=T, echo=F}
+res <- cor.test(OLR_complete_cases$sr_38_contact_admirable_reversed,OLR_complete_cases$sr_39_contact_good_reversed, method = "spearman")
+print(res)
+```
+The two measures of perceived behavioral control ("admirable/shameful" and "good/bad") show a moderate positive relationship. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`.   
+
+#### TPB Behavioral Attitude - 2nd factor - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_behavioralattitude2 <- OLR_complete_cases %>% 
+  dplyr::select(
+    matches("sr_32_contact_useful"),
+    matches("sr_33_contact_pleasant"),
+    matches("sr_37_contact_sensible"))
+
+psych::alpha(d_pca_behavioralattitude2, use ="pairwise") 
+```
+.77 alpha shows good reliability, and it decreases when any items are dropped. 
+
+#### TPB Behavioral Attitude - 3rd factor - Cronbach Alpha
+```{r, eval=T, echo=F}
+d_pca_behavioralattitude3 <- OLR_complete_cases %>% 
+  dplyr::select(
+    matches("sr_34_contact_cool_reversed"),
+    matches("sr_35_contact_easy_reversed"),
+    matches("sr_36_contact_exciting_reversed"))
+
+psych::alpha(d_pca_behavioralattitude3, use ="pairwise") 
+```
+.80 alpha shows good reliability, and it decreases when any items are dropped. 
+
+```{R, eval=T, echo=F, include=F}
+# Create comp varialbes
+OLR_complete_cases <- OLR_complete_cases %>% 
+  mutate(
+    behatt_admirablegood_comp = rowMeans(subset(OLR_complete_cases, select = c(sr_38_contact_admirable_reversed, sr_39_contact_good_reversed))),
+    behatt_usefulpleasantsensible_comp = rowMeans(subset(OLR_complete_cases, select = c(sr_32_contact_useful, sr_33_contact_pleasant, sr_37_contact_sensible))),
+    behatt_coolexcitingeasy_comp = rowMeans(subset(OLR_complete_cases, select = c(sr_34_contact_cool_reversed, sr_35_contact_easy_reversed, sr_36_contact_exciting_reversed))))
+```
+
+$$\\[.05in]$$
+### Perceived Behavioral Control - correlation  
+*"Imagine the idea of calling an elected official on a regular basis over the next year."*    
+*"30 - How easy would it be for you to make these calls on a regular basis?"*  
+*"31 - How able might you be to make such calls on a regular basis?"*
+
+```{r, eval=T, echo=F, warning=F}
+res <- cor.test(OLR_complete_cases$sr_30_easy_to_call,OLR_complete_cases$sr_31_able_to_call, method = "spearman")
+print(res)
+
+#mean(OLR_complete_cases$sr_30_easy_to_call, na.rm=TRUE)
+#sd(OLR_complete_cases$sr_30_easy_to_call, na.rm=TRUE)
+
+#mean(OLR_complete_cases$sr_31_able_to_call, na.rm=TRUE)
+#sd(OLR_complete_cases$sr_31_able_to_call, na.rm=TRUE)
+```
+The two measures of perceived behavioral control show a moderate-to-poor positive relationship, just barely under the .65 rule of thumb. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`. This is not a strong enough correlation to justify a composite variable of the two items, so they will stay separate.
+
+$$\\[.05in]$$
+
+### Worldviews
+We decided these will be kept as-is.
+
+```{r, eval=T, echo=F}
+d_worldviews <- OLR_complete_cases %>% 
+  dplyr::select(
+    matches("sr_41a"),
+    matches("sr_41b"),
+    matches("sr_41c"),
+    matches("sr_41d"),
+    matches("sr_41e"),
+    matches("sr_41f"))
+
+summary(d_worldviews)
+sapply(d_worldviews, sd, na.rm=TRUE)
+```
+$$\\[.05in]$$
+
+
+
+## EDA - Categorical variables factoring & levels reduction
+We initially received 1,410 surveys at least partially completed. After filtering `r count(rejected)` responses that did not meet quality control criteria such as straight-lining or finishing the survey unrealistically quickly, we were left with a dataset of `r count(respondents)` responses. After removing respondents with incomplete data, we were left with a final dataset of `r dim(OLR_complete_cases)[1]` responses across `r dim(OLR_complete_cases)[2]` variables. 
+Respondents were balanced gender-wise, with 48.9% male and 48.7% female, but whites are overrepresented racially, with 79% white, and the sample is highly educated: 65% have a bachelor's degree or higher.
+
+The response variable for this analysis is #12a: "In the last twelve months, how many times have you taken the following actions related to climate change?  
+Answer option: Contacted elected officials via mail, email, or phone to urge them to take action to reduce climate change."
+
+All explanatory variables were treated as continuous, except for the following categorical vars which were reduced to the following smaller number of factor levels in order to have enough responses per level for analysis.  
+  
+- #7: What do you believe about climate change?: Left as-is  
+- Race: Reduced to "white" and "other"  
+- Gender: Reduced to "male" and "female"    
+- Children: Reduced to "children" (any age) and "no children"  
+- Marital status: Reduced to "single" "married/partner" and "divorce/widow"    
+- Education: Reduced to "associate's degree or lower", "bachelor's degree" and "graduate/professional degree"  
+- Employment status: Reduced to "work full-time" "retired" and "other"  
+- Income: Reduced to "under 100k", "100-150k" and "over 150k"   
+- Religion: Reduced to "religious" and "not religious"  
+- Political party affiliation: Reduced to "democrat" "republican" "independent" and "other"  
+- Political ideology: Reduced to "liberal" "moderate" and "conservative"  
+
+#### EDA - Race
+```{r eval=T, echo=F, include=T}
+# RACE
+# # Percentage of missing data on race - 21% missing
+# totalvar <- count(respondents)
+# 
+# (totalvar - whitecount - othercount)/totalvar
+# 
+# # number of white respondents
+# whitecount <- sum(d_accept$sr_74_1_race_white==1, na.rm = T)
+# # number of other ethnicities
+# othercount <- sum(d_accept$sr_74_2_race_black==2 | d_accept$sr_74_3_race_hispanic==3 | d_accept$sr_74_4_race_native_american==4 | d_accept$sr_74_5_race_east_asian==5 | d_accept$sr_74_6_race_middle_eastern==6 | d_accept$sr_74_7_race_south_asian==7, na.rm = T)
+
+
+# levels(OLR_complete_cases$race_white_dumvar)
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$race_white_dumvar)
+# total responses by religion type
+table(OLR_complete_cases$race_white_dumvar)
+
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2)
+```
+Race variable reduced to two levels: "white" and "other". The question was a check-all-that-apply; if a respondent chose white along with any other races they were coded as white. 
+
+1) Number of responses: `r table(OLR_complete_cases$race_white_dumvar)[1]` white respondents and `r table(OLR_complete_cases$race_white_dumvar)[2]` other respondents. 
+
+2) Proportion of responses broken out by race
+
+#### EDA - Q7 CC Belief
+```{r eval=T, echo=F, include=T}
+# CATEGORICAL VARIABLES re-coding
+OLR_complete_cases$sr_7_believe_about_climate_change <- factor(OLR_complete_cases$sr_7_believe_about_climate_change, ordered=FALSE)
+OLR_complete_cases$sr_7_believe_about_climate_change <- recode_factor(OLR_complete_cases$sr_7_believe_about_climate_change, "1"="notchanging", "2"="most_natural", "3"="natural_human", "4"="most_human", "5"="excl_human")
+# total responses by religion type
+table(OLR_complete_cases$sr_7_believe_about_climate_change)
+```
+Number of responses by answer option. Leaving these categories as-is. 
+
+#### EDA - Gender
+```{r eval=T, echo=F, include=T}
+# There are 1055 respondents in OLR_complete_cases, but I can only find a sum of 1049 respondents across all gender options and I can't find a way to display those skips/"n/a"s???
+# d_accept %>% 
+#   summarize(female = sum(gender==1, na.rm = TRUE),
+#             femalepercent = sum(gender==1, na.rm = TRUE)/sum(gender, na.rm =TRUE),
+#             male = sum(gender==2, na.rm = TRUE),
+#             malepercent = sum(gender==2, na.rm = TRUE)/sum(gender, na.rm =TRUE),
+#             other = sum(gender==3, na.rm = TRUE),
+#             otherpercent = sum(gender==3, na.rm = TRUE)/sum(gender, na.rm =TRUE),
+#             noanswer = sum(gender==4, na.rm = TRUE),
+#             noanswerpercent = sum(gender==4, na.rm = TRUE)/sum(gender, na.rm =TRUE),
+#             total = sum((gender==1)+(gender==2)+(gender==3)+(gender==4), na.rm = TRUE))
+
+
+# levels(OLR_complete_cases$gender_dumvar)
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$gender_dumvar)
+# total responses by religion type
+table(OLR_complete_cases$gender_dumvar)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2)
+```
+Total females and males, and response proportions by gender. 
+
+#### EDA - Marital Status
+Original levels:  
+1="single" 2="married / partner" 3="divorced / separated" 4="widowed"
+```{r eval=T, echo=F, include=T}
+# MARITAL STATUS
+OLR_complete_cases$sr_56_marital_status <- factor(OLR_complete_cases$sr_56_marital_status, ordered=FALSE)
+#levels(OLR_complete_cases$sr_56_marital_status)
+# Breakdown of responses
+table(OLR_complete_cases$sr_56_marital_status)
+```
+  
+Collapsing down to three levels, though "Divorce/widow" might not have enough responses to support our analysis; need to double-check.
+```{r eval=T, echo=F, include=T}
+# Therefore, collapsing as follows:
+# "single" and "married/partner" stay as-is
+# "divorce" and "widow" -> "divorce_widow"
+OLR_complete_cases$sr_56_marital_status <- recode_factor(OLR_complete_cases$sr_56_marital_status, "1"="single", "2"="married_partner", "3"="divorce_widow", "4"="divorce_widow")
+# levels(OLR_complete_cases$sr_56_marital_status)
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$sr_56_marital_status)
+# total responses by religion type
+table(OLR_complete_cases$sr_56_marital_status)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2)
+```
+
+#### EDA - Children / no children
+```{r eval=T, echo=F, include=T}
+# CHILDREN
+# Number of records w/ dependents, adult children, and no children
+# # 26.3% of resp did not answer question. 777 responses, 278 missing.
+# OLR_complete_cases %>% 
+#   count(sr_57i_dependents >= 1)  # 274 resp w/ children <18
+# OLR_complete_cases %>% 
+#   count(sr_57j_adultchildren >= 1)  # 393 resp w/ adult children
+# OLR_complete_cases %>% 
+#   count(sr_57k_nochildren == 0)  # 110 resp w/ no children
+
+
+
+# Collapsing to "children" and "no children"
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$children_dumvar)
+# total responses by religion type
+table(OLR_complete_cases$children_dumvar)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2)
+
+```
+Totoal number of respondents by "children" and "no children" categories, as well as response proportions. 
+
+#### EDA - Education
+Original levels:  
+"1"="some high_school", "2"="high_school grad", "3"="somecollege", "4"="Assoc degree", "5"="bachelordeg", "6"="graduatedeg")
+Need to combine all Assoc deg or lower options so we have enough responses to analyze.
+```{r eval=T, echo=F, include=T}
+# EDUCATION
+OLR_complete_cases$sr_61_education <- factor(OLR_complete_cases$sr_61_education, ordered=TRUE)
+# levels(OLR_complete_cases$sr_61_education)
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$sr_61_education)
+# total responses by religion type
+table(OLR_complete_cases$sr_61_education)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2)
+```
+ 
+Reduced levels:  
+```{r eval=T, echo=F, include=T}
+# Collapsing the following:
+# "some HS" and "HS grad" -> "high_school"
+# "some college" and "assoc deg" -> "somecollege"
+# bach deg and graduate deg stay as-is
+OLR_complete_cases$sr_61_education <- recode_factor(OLR_complete_cases$sr_61_education, "1"="assocdeg_orlower", "2"="assocdeg_orlower", "3"="assocdeg_orlower", "4"="assocdeg_orlower", "5"="bachelordeg", "6"="graduatedeg")
+# levels(OLR_complete_cases$sr_61_education)
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$sr_61_education)
+# total responses by religion type
+table(OLR_complete_cases$sr_61_education)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2)
+```
+
+#### EDA - Employment Status
+Original categories:  
+"1"="workfulltime", "2"="workparttime", "3"="homemaker", "4"="retired", "5"="student", "6"="unemployed", "0"="other")  
+```{r eval=T, echo=F, include=T}
+# EMPLOYMENT STATUS
+OLR_complete_cases$sr_71_employment_status <- factor(OLR_complete_cases$sr_71_employment_status, ordered=FALSE)
+# levels(OLR_complete_cases$sr_71_employment_status)
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$sr_71_employment_status)
+# total responses by religion type
+table(OLR_complete_cases$sr_71_employment_status)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2)
+```
+
+Reduced levels:  
+Collapsed all other levels into "other" besides "full time work" and "retired" in order to have enough responses to analyze. 
+```{r eval=T, echo=F, include=T}
+# Collapsing the following: 
+# "full-time work" and "retired" stay as-is
+# all others -> "other"
+OLR_complete_cases$sr_71_employment_status <- recode_factor(OLR_complete_cases$sr_71_employment_status, "1"="workfull", "2"="other", "3"="other", "4"="retired", "5"="other", "6"="other", "0"="other")
+#levels(OLR_complete_cases$sr_71_employment_status)
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$sr_71_employment_status)
+# total responses by religion type
+table(OLR_complete_cases$sr_71_employment_status)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2) 
+```
+
+#### EDA - Income
+Original categories:  
+"1"="under25k", "2"="25-49k", "3"="50-74k", "4"="75-99k", "5"="100_150k", "6"="150-199k", "7"="200-249k", "8"="over250k", 9=prefer not to answer
+```{r eval=T, echo=F, include=T}
+# INCOME
+OLR_complete_cases$sr_72_income <- factor(OLR_complete_cases$sr_72_income, ordered=TRUE)
+# levels(OLR_complete_cases$sr_72_income)
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$sr_72_income)
+# total responses by religion type
+table(OLR_complete_cases$sr_72_income)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2) 
+```
+
+Reduced levels:  
+under 100k -> "under100k"  
+100-150 -> stays as-is  
+over 150 -> "over150k"  
+```{r eval=T, echo=F, include=T}
+# Collapsing the following:
+# "prefer not to answer" -> NA
+# under 100k -> "under100k"
+# 100-150 -> stays as-is
+# over 150 -> "over150k"
+OLR_complete_cases$sr_72_income <- recode_factor(OLR_complete_cases$sr_72_income, "1"="under100k", "2"="under100k", "3"="under100k", "4"="under100k", "5"="100_150k", "6"="over150k", "7"="over150k", "8"="over150k", "9"="over150k")
+# levels(OLR_complete_cases$sr_72_income)[levels(OLR_complete_cases$sr_72_income)=="9"] <- NA
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$sr_72_income)
+# total responses by religion type
+table(OLR_complete_cases$sr_72_income)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2) 
+```
+
+
+#### EDA - Religion
+Reduced levels to religious & non-religious
+```{r eval=T, echo=F, include=T}
+# RELIGION
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$sr_75_religion_dumvar)
+# total responses by religion type
+table(OLR_complete_cases$sr_75_religion_dumvar)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2)
+```
+
+#### EDA - Political Affiliation
+Original levels:  
+"1"="democrat", "2"="republican", "3"="independent", "4"="green party", "5"="libertarian", "6"="no party", "0"="other")
+```{r eval=T, echo=F, include=T}
+# POLITICAL AFFILIATION
+OLR_complete_cases$sr_78_political_affiliation <- factor(OLR_complete_cases$sr_78_political_affiliation, ordered=FALSE)
+# levels(OLR_complete_cases$sr_78_political_affiliation)
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$sr_78_political_affiliation)
+# total responses by religion type
+table(OLR_complete_cases$sr_78_political_affiliation)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2)
+```
+
+Reduced levels:  
+```{r eval=T, echo=F, include=T}
+# Collapsing as follows:
+# "dem" "rep" and "ind" stay as-is
+# all others -> "other"
+OLR_complete_cases$sr_78_political_affiliation <- recode_factor(OLR_complete_cases$sr_78_political_affiliation, "1"="democrat", "2"="republican", "3"="independent", "4"="other", "5"="other", "6"="other", "0"="other")
+
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$sr_78_political_affiliation)
+# total responses by religion type
+table(OLR_complete_cases$sr_78_political_affiliation)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2)
+```
+
+
+#### EDA - Political Ideology
+Original levels:  
+"1"="very liberal", "2"="somewhat liberal", "3"="moderate", "4"="somewhat conservative", "5"="very conservative")
+```{r eval=T, echo=F, include=T}
+# POLITICAL IDEOLOGY
+OLR_complete_cases$sr_79_political_leaning <- factor(OLR_complete_cases$sr_79_political_leaning, ordered=FALSE)
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$sr_79_political_leaning)
+# total responses by religion type
+table(OLR_complete_cases$sr_79_political_leaning)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2)
+```
+
+Reduced levels:  
+```{r eval=T, echo=F, include=T}
+# Collapsing to "liberal" "moderate" "conservative" since we're seeing no differences across the levels. 
+OLR_complete_cases$sr_79_political_leaning <- recode_factor(OLR_complete_cases$sr_79_political_leaning, "1"="liberal", "2"="liberal", "3"="moderate", "4"="conservative", "5"="conservative")
+# levels(OLR_complete_cases$sr_79_political_leaning)
+table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$sr_79_political_leaning)
+# total responses by religion type
+table(OLR_complete_cases$sr_79_political_leaning)
+# proportion of total responses, grouped by religion option and level of response variable.
+prop.table(table_1, margin=2)
+```
+Collapsing the two liberal levels and two conservative levels into one level apiece. 
+
+
+## Listwise Deletion
+```{r listwise deletion eval=T, echo=F, include=F}
+# Checking extent of missing data w/ listwise deletion
+OLRdata <- d_accept %>% dplyr::select(
+  matches("sr_12a_actions_contacted_officials"),
+  -matches("sr_12a_actions_contacted_officials_factor"),  
+  matches("sr_24_past_contact"),
+  matches("sr_25_future_contact"),
+
+  matches("sr_19a_contacting_officials_parents"),
+  
+  matches("sr_19b_contacting_officials_spouse"),
+  matches("sr_19c_contacting_officials_children"),
+  
+  matches("sr_19d_contacting_officials_otherfamily"),
+  matches("sr_19e_contacting_officials_friends"),
+  matches("sr_19f_contacting_officials_coworkers"),
+  matches("sr_19g_contacting_officials_recpartners"),
+  matches("sr_19h_contacting_officials_faithcommun"),
+
+  matches("sr_20b_rolemodels_spouse"),
+  matches("sr_20c_rolemodels_children"),
+
+  matches("sr_20d_rolemodels_otherfamily"),
+  matches("sr_20e_rolemodels_friends"),
+  matches("sr_20f_rolemodels_coworkers"),
+  matches("sr_20g_rolemodels_recpartners"),
+  matches("sr_20h_rolemodels_faithcommun"),
+
+  matches("sr_22b_expect_contact_spouse"),
+  matches("sr_22c_expect_contact_children"),
+
+  matches("sr_22d_expect_contact_otherfamily"),
+  matches("sr_22e_expect_contact_friends"),
+  matches("sr_22f_expect_contact_coworkers"),
+  matches("sr_22g_expect_contact_recpartners"),
+  matches("sr_22h_expect_contact_faithcommun"),
+
+  matches("sr_23a_motivated_to_comply_parents"),
+  matches("sr_23b_motivated_to_comply_spouse"),
+  matches("sr_23c_motivated_to_comply_children"),
+
+  matches("sr_23d_motivated_to_comply_otherfamily"),
+  matches("sr_23e_motivated_to_comply_friends"),
+  matches("sr_23f_motivated_to_comply_coworkers"),
+  matches("sr_23g_motivated_to_comply_recpartners"),
+  matches("sr_23h_motivated_to_comply_faithcommun"),
+
+  matches("sr_16_hear_friends_talk"),
+  matches("sr_17_hear_media"),
+  matches("sr_18_hear_public_officials"),
+
+  matches("sr_3b_importance_climatechange"),
+  matches("sr_8_importance_personally"),
+  matches("sr_9_worried"),
+  matches("sr_10_harm_you_personally"),
+
+  matches("sr_29a_effective_fed"),
+  matches("sr_29b_effective_state"),
+  matches("sr_29c_effective_business"),
+  matches("sr_29d_effective_ngo"),
+  
+  matches("sr_21a_effective_actions_contacting_officials"),
+  matches("sr_27a_competent_fed"),
+  matches("sr_27b_competent_state"),
+  matches("sr_27c_competent_business"),
+  matches("sr_28a_responsive_fed"),
+  matches("sr_28b_responsive_state"),
+  matches("sr_28c_responsive_business"),
+
+  matches("sr_27d_competent_ngo"),
+  matches("sr_28d_responsive_ngo"),
+
+  matches("sr_38_contact_admirable"),
+  matches("sr_39_contact_good"),
+
+  matches("sr_32_contact_useful"),
+  matches("sr_33_contact_pleasant"),
+  matches("sr_37_contact_sensible"),
+
+  matches("sr_34_contact_cool"),
+  matches("sr_35_contact_easy"),
+  matches("sr_36_contact_exciting"),
+  matches("sr_20a_rolemodels_parents"),
+  matches("sr_22a_expect_contact_parents"),
+  matches("sr_7_believe_about_climate_change"),
+  matches("sr_11_harm_future_generations"),
+  matches("sr_21a_effective_actions_contacting_officials"),
+  matches("sr_30_easy_to_call"),
+  matches("sr_31_able_to_call"),
+  matches("sr_41a_right_to_modify"),
+  matches("sr_41b_laws_of_nature"),
+  matches("sr_41c_ingenuity"),
+  matches("sr_41d_impotent"),
+  matches("sr_41e_govt_do_more"),
+  matches("sr_41f_equity"),
+  matches("race_white_dumvar"),
+  matches("children_dumvar"),
+  matches("gender_dumvar"),
+  matches("age_true"),
+  -matches("age_range"),  
+  matches("sr_56_marital_status"),
+  matches("sr_61_education"),
+  matches("sr_71_employment_status"),
+  matches("sr_72_income"),
+  matches("sr_75_religion_dumvar"),
+  matches("sr_78_political_affiliation"),
+  matches("sr_79_political_leaning")
+)
+# listwise deletion
+OLR_complete_cases <- OLRdata[complete.cases(OLRdata), ]
+dim(OLR_complete_cases)[1] # responses
+dim(OLR_complete_cases)[2] # variables
+
+#### Respondents / rejected from d_accept
+# Number of respondents / rejects
+respondents <- d %>%
+  dplyr::filter(reject==0) %>%
+  count(respondent_id)
+
+rejected <- d %>%
+  dplyr::filter(reject==1) %>%
+  count(respondent_id)
+```
+
+
+# Ordinal logistic regression model. Model selection using AIC w/ backwards selection
+```{r, eval=T, echo=F, include=T}
+# Build initial ordinal logistic regression model with all potential variables included
+ord_reg_model <- polr(OLR_complete_cases$sr_12a_actions_contacted_officials ~ 
+                        age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
+                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
+                        sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
+                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
+                        descdynamicnorms_comp + desccontactnorms_spouse_child_comp +
+                        desccontactnorms_other_comp + descrolemodelnorms_spouse_child_comp +
+                        descrolemodelnorms_other_comp + injunctcontactnorms_spouse_child_comp +
+                        injunctcontactnorms_other_comp + injunctmotivation_spouse_child_comp +
+                        injunctmotivation_other_comp + cimbenefits_comp + 
+                        cimperceivedrisk_comp + 
+                        sr_11_harm_future_generations + sr_21a_effective_actions_contacting_officials +
+                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
+                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
+                        behatt_coolexcitingeasy_comp + 
+                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
+                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
+                        sr_41e_govt_do_more + sr_41f_equity,data = OLR_complete_cases, Hess = T)
+
+summary(ord_reg_model)
+
+fit1_OLR <- stepAIC(ord_reg_model, direction="backward")
+```
+
+$$\\[.05in]$$
+#### Break out final model for readability
+```{r, eval=T, echo=F, include=T}
+fit1_OLR
+```
+Perceived Risk: -1.03
+
+Descriptive norms - contacting: 0.74
+
+CIM Benefits: 0.58
+
+
+
+$$\\[.05in]$$
+#### Interpreting final model coefficients and intercepts
+```{r, eval=F, echo=F, include=T}
+# get the p-values from the final model and store the coefficient table
+ctable <- round(coef(summary(fit1_OLR)), 4)
+# calculate and store p-values
+p <- pnorm(abs(ctable[, "t value"]), lower.tail = F) * 2
+# combine coefficient table and p-values table
+(ctable <- cbind(ctable, "p value" = round(p, 4)))
+```
+Looking at the absolute values of the coefficient tells us the most influential factors. So it looks like our top three, just to set a random cutoff, are respectively CIMperceivedrisk_comp (composite var of perceived risk), then CIMbenefits_comp (comp var of benefits as defined in the CIM), and finally the composite var of injunctive norms from the immediate family.
+  
+CIMperceivedrisk = sr_3b_importance_climatechange, sr_8_importance_personally, sr_9_worried, sr_10_harm_you_personally  
+CIMbenefits = sr_16_hear_friends_talk, sr_17_hear_media, sr_18_hear_public_officials  
+Injunctcontactnorms_fam_comp = sr_22b_expect_contact_spouse, sr_22c_expect_contact_children
+
+#### Interpreting proportional odds ratios and CIs
+```{r, eval=T, echo=F, include=T}
+# # Add CIs for variables and for interpreting the proportional odds ratios. 
+# (ci <- confint(fit1_OLR)) # default method gives profiled CIs
+# confint.default(fit1_OLR) # CIs assuming normality
+# exp(coef(fit1_OLR))
+# exp(cbind(OR = coef(fit1_OLR), ci))
+
+# get confidence intervals
+# profiled CIs
+ci <- round(confint(fit1_OLR), 4)
+# log odd coefficients
+or <- round(coef(fit1_OLR), 4)
+# convert coefficients into odds ratio, combine with CIs
+round(exp(cbind(OR = or, ci)), 4)
+```
+Still wrapping my head around interpreting the output of OLR, but I think it's something like the following, just choosing one variable for demonstration:  
+  
+"For a one unit increase in composite variable of CIM Benefits, the odds of moving from "no contact" to "one contact" or "more than one contact" (in the last twelve months) are 1.92 times greater, given that the other variables in the model are held constant.”
+
+
