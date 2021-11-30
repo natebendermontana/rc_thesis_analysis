@@ -67,7 +67,6 @@ d <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/dyn_national_2020
 
 d_accept <- d %>% 
   dplyr::filter(reject == 0)
-
 ```
 
 ```{r check missing data, eval=F, echo=F, include=F}
@@ -225,11 +224,9 @@ Table of contents:
 4) OLR model  
 5) Discussion of OLR results 
 
-Alex - per your suggestion I went back in and reduced several of the groups that were at four factors down to two factors. We lose a little bit in the amount of cumulative variance explained, but doing that seems to help the factors hang together even more reliably, and also had the side benefit of aligning all the factors for the descriptive and injunctive social norms: both now break down into two factors: "spouse & children" and all others: "parents, otherfamily, friends, coworkers, recreationpartners, faithcommunity"  
-
 
 ## Variable renaming, cleanup, listwise deletion
-```{r eval=T, echo=T, include=T}
+```{r, eval=T, echo=F, include=T}
 # rename 19a parents var b/c it's misspelled
 d_accept <- rename(d_accept, sr_19a_contacting_officials_parents = sr_19a_contacting_officials__parents)
 
@@ -364,14 +361,17 @@ Correlation test of the two dynamic norms items shows moderate positive correlat
 
 $$\\[.05in]$$
 
-### Descriptive Norms (contact)
-*"To what extent do you think that the following people ARE CONTACTING (writing letters, emailing, or calling) their elected representatives in Congress to urge action on reducing climate change?"*
-
-One factor solution (81% cumulative variance (hereafter: cv))   
-1. All
+### Descriptive Norms
+(contact) *"To what extent do you think that the following people ARE CONTACTING (writing letters, emailing, or calling) their elected representatives in Congress to urge action on reducing climate change?"*
+  
+(role models) *"How likely are you to consider each of these groups as behavioral role models?"*  
+  
+Two factor solution (73% cumulative variance (hereafter: cv))   
+1. All "contact" items
+2. All "role model" items
 
 ```{r, eval=T, echo=F}
-d_pca_descriptivecontactnorms <- d_accept %>% 
+d_pca_descriptivenorms <- d_accept %>% 
   dplyr::select(
   matches("sr_19a_contacting_officials_parents"),
   matches("sr_19b_contacting_officials_spouse"),
@@ -380,16 +380,24 @@ d_pca_descriptivecontactnorms <- d_accept %>%
   matches("sr_19e_contacting_officials_friends"),
   matches("sr_19f_contacting_officials_coworkers"),
   matches("sr_19g_contacting_officials_recpartners"),
-  matches("sr_19h_contacting_officials_faithcommun"))
+  matches("sr_19h_contacting_officials_faithcommun"),
+  matches("sr_20a"),
+  matches("sr_20b"),
+  matches("sr_20c"),
+  matches("sr_20d"),
+  matches("sr_20e"),
+  matches("sr_20f"),
+  matches("sr_20g"),
+  matches("sr_20h"))
   
-fa.parallel(d_pca_descriptivecontactnorms, fm='minres', fa='fa')
-pca1 <- fa(d_pca_descriptivecontactnorms, nfactors = 1, rotate = "Varimax", fm="minres") 
+fa.parallel(d_pca_descriptivenorms, fm='minres', fa='fa')
+pca1 <- fa(d_pca_descriptivenorms, nfactors = 2, rotate = "Varimax", fm="minres") 
 print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 
 ```
 
-#### Descriptive Norms (contact) - 1st factor (Fam & non-fam) - Cronbach Alpha
+#### Descriptive Norms (contact) - 1st factor (all) - Cronbach Alpha
 ```{r, eval=T, echo=F, include=F}
 d_pca_descriptivecontactnorms_all <- d_accept %>% 
   dplyr::select(
@@ -419,32 +427,7 @@ d_accept <- d_accept %>%
 ```
 
 $$\\[.05in]$$
-### Descriptive Norms (role models)
-*"How likely are you to consider each of these groups as behavioral role models?"*
-
-Scree plot suggests four factors, but one factor solution makes the most sense.   
-One factor solution (65% cv):   
-1. All
-
-```{r eval=TRUE, echo=F}
-d_pca_descriptiverolemodelnorms <- d_accept %>% 
-  dplyr::select(
-    matches("sr_20a"),
-    matches("sr_20b"),
-    matches("sr_20c"),
-    matches("sr_20d"),
-    matches("sr_20e"),
-    matches("sr_20f"),
-    matches("sr_20g"),
-    matches("sr_20h"))
-    
-fa.parallel(d_pca_descriptiverolemodelnorms, fm='minres', fa='fa')
-pca1 <- fa(d_pca_descriptiverolemodelnorms, nfactors = 1, rotate = "Varimax", fm="minres") 
-print(pca1)
-print(pca1$loadings,cutoff = 0.3)
-
-```
-#### Descriptive Norms (role models) - 1st factor (All) - Cronbach Alpha
+#### Descriptive Norms (role models) - 2nd factor (All) - Cronbach Alpha
 ```{r, eval=T, echo=F}
 d_pca_descriptivecontactnorms_all <- d_accept %>% 
   dplyr::select(
@@ -469,11 +452,15 @@ d_accept <- d_accept %>%
 ```
 
 $$\\[.05in]$$
-### Injunctive Norms (contact) 
-*"To what extent do you think that the following people EXPECT YOU to contact (writing letters, emailing, or calling) your elected representatives to urge action on reducing climate change?"*
+### Injunctive Norms 
+(contact) *"To what extent do you think that the following people EXPECT YOU to contact (writing letters, emailing, or calling) your elected representatives to urge action on reducing climate change?"*
 
-Scree plot suggests one factor (86% cv).
-One factor solution: All
+(motivation) *"How motivated are you to comply with the expectations of each of these people?"*
+  
+Scree plot suggests two factors (76% cv).
+1. All "contact" items
+2. All "motivation" items
+
 ```{r, eval=T, echo=F}
 d_pca_injunctivecontactnorms <- d_accept %>% 
   dplyr::select(
@@ -484,10 +471,18 @@ d_pca_injunctivecontactnorms <- d_accept %>%
     matches("sr_22e"),
     matches("sr_22f"),
     matches("sr_22g"),
-    matches("sr_22h"))
+    matches("sr_22h"),
+    matches("sr_23a"),
+    matches("sr_23b"),
+    matches("sr_23c"),
+    matches("sr_23d"),
+    matches("sr_23e"),
+    matches("sr_23f"),
+    matches("sr_23g"),
+    matches("sr_23h"))
 
 fa.parallel(d_pca_injunctivecontactnorms, fm='minres', fa='fa')
-pca1 <- fa(d_pca_injunctivecontactnorms, nfactors = 1, rotate = "Varimax", fm="minres") 
+pca1 <- fa(d_pca_injunctivecontactnorms, nfactors = 2, rotate = "Varimax", fm="minres") 
 print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 
@@ -499,18 +494,18 @@ print(pca1$loadings,cutoff = 0.3)
 ```
 #### Injunctive Norms (contact) - 1st factor (All) - Cronbach Alpha
 ```{r, eval=T, echo=F}
-d_pca_injunctivecontactnorms_all <- d_accept %>% 
+d_pca_injunctivenorms_all <- d_accept %>% 
   dplyr::select(
-    matches("sr_22a_expect_contact_parents"),
-    matches("sr_22b_expect_contact_spouse"),
-    matches("sr_22c_expect_contact_children"),
+    matches("sr_22a"),
+    matches("sr_22b"),
+    matches("sr_22c"),
     matches("sr_22d"),
     matches("sr_22e"),
     matches("sr_22f"),
     matches("sr_22g"),
     matches("sr_22h"))
 
-psych::alpha(d_pca_injunctivecontactnorms_all, use ="pairwise") 
+psych::alpha(d_pca_injunctivenorms_all, use ="pairwise") 
 ```
 .98 alpha shows high reliability. Dropping any items decreases the alpha. 
 
@@ -521,30 +516,8 @@ d_accept <- d_accept %>%
     injunctcontactnorms_all_comp = rowMeans(d_accept[, c("sr_22a_expect_contact_parents", "sr_22b_expect_contact_spouse", "sr_22c_expect_contact_children", "sr_22d_expect_contact_otherfamily", "sr_22e_expect_contact_friends", "sr_22f_expect_contact_coworkers", "sr_22g_expect_contact_recpartners", "sr_22h_expect_contact_faithcommun")], na.rm=T))
 ```
 $$\\[.05in]$$
-### Injunctive Norms (motivation)
-*"How motivated are you to comply with the expectations of each of these people?"*
 
-Plot suggests two factor solution (70% cv) but one factor (65% cv) makes sense and is reliable.     
-1. All
-```{r, eval=T, echo=F}
-d_pca_injunctivemotivation <- d_accept %>% 
-  dplyr::select(
-    matches("sr_23a"),
-    matches("sr_23b"),
-    matches("sr_23c"),
-    matches("sr_23d"),
-    matches("sr_23e"),
-    matches("sr_23f"),
-    matches("sr_23g"),
-    matches("sr_23h"))
-
-fa.parallel(d_pca_injunctivemotivation, fm='minres', fa='fa')
-pca1 <- fa(d_pca_injunctivemotivation, nfactors = 1, rotate = "Varimax", fm="minres") 
-print(pca1)
-print(pca1$loadings,cutoff = 0.3)
-```
-
-#### Injunctive Norms (motivation) - 2nd factor (parents, otherfam, friends, cowork, recpartners, faithcomm) - Cronbach Alpha
+#### Injunctive Norms (motivation) - 2nd factor (all) - Cronbach Alpha
 ```{r, eval=T, echo=F}
 d_pca_injunctivemotivation_all <- d_accept %>% 
   dplyr::select(
@@ -650,17 +623,17 @@ print(res)
 The two measures of perceived risk show a slightly positive relationship. Spearman's rho is `r res$estimate` with a p-value of `r res$p.value`. Not a strong enough relationship to combine the variables; they will stay separate. 
 
 
-```{r, eval=T, echo=F, include=F}
+```{r, eval=T, echo=F, include=T}
 # Create single composite variable
 d_accept <- d_accept %>% 
   mutate(
     cimperceivedrisk_comp = rowMeans(d_accept[, c("sr_3b_importance_climatechange_reversed", "sr_8_importance_personally_reversed", "sr_9_worried_reversed")], na.rm=T))
 
 # single var
-sr_10_harm_you_personally_reversed
+# sr_10_harm_you_personally_reversed
 
 # single var
-sr_11_harm_future_generations_reversed
+# sr_11_harm_future_generations_reversed
 ```
 
 $$\\[.05in]$$
@@ -864,16 +837,16 @@ $$\\[.05in]$$
 
 
 # levels(OLR_complete_cases$race_white_dumvar)
-table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$race_white_dumvar)
+table_1 <- table(d_accept$sr_12a_actions_contacted_officials, d_accept$race_white_dumvar)
 # total responses by religion type
-table(OLR_complete_cases$race_white_dumvar)
+table(d_accept$race_white_dumvar)
 
 # proportion of total responses, grouped by religion option and level of response variable.
 prop.table(table_1, margin=2)
 ```
 Race variable reduced to two levels: "white" and "other". The question was a check-all-that-apply; if a respondent chose white along with any other races they were coded as white. 
 
-1) Number of responses: `r table(OLR_complete_cases$race_white_dumvar)[1]` white respondents and `r table(OLR_complete_cases$race_white_dumvar)[2]` other respondents. 
+1) Number of responses: `r table(d_accept$race_white_dumvar)[1]` white respondents and `r table(d_accept$race_white_dumvar)[2]` other respondents. 
 
 2) Proportion of responses broken out by race
 
@@ -903,9 +876,9 @@ Number of responses by answer option. Leaving these categories as-is.
 
 
 # levels(OLR_complete_cases$gender_dumvar)
-table_1 <- table(OLR_complete_cases$sr_12a_actions_contacted_officials, OLR_complete_cases$gender_dumvar)
+table_1 <- table(d_accept$sr_12a_actions_contacted_officials, d_accept$gender_dumvar)
 # total responses by religion type
-table(OLR_complete_cases$gender_dumvar)
+table(d_accept$gender_dumvar)
 # proportion of total responses, grouped by religion option and level of response variable.
 prop.table(table_1, margin=2)
 ```
@@ -1099,6 +1072,7 @@ Original levels:
 ```{r eval=T, echo=F, include=T}
 # POLITICAL IDEOLOGY
 d_accept$sr_79_political_leaning <- factor(d_accept$sr_79_political_leaning, ordered=FALSE)
+
 table_1 <- table(d_accept$sr_12a_actions_contacted_officials, d_accept$sr_79_political_leaning)
 # total responses by religion type
 table(d_accept$sr_79_political_leaning)
@@ -1120,8 +1094,9 @@ prop.table(table_1, margin=2)
 Collapsing the two liberal levels and two conservative levels into one level apiece. 
 
 
+
 ## Listwise Deletion
-```{r listwise deletion eval=T, echo=F, include=F}
+```{r, eval=T, echo=F, include=T}
 # Checking extent of missing data w/ listwise deletion
 OLRdata <- d_accept %>% dplyr::select(
   matches("sr_12a_actions_contacted_officials"),
@@ -1198,7 +1173,6 @@ All explanatory variables were treated as continuous, except for the following c
 - Political party affiliation: Reduced to "democrat" "republican" "independent" and "other"  
 - Political ideology: Reduced to "liberal" "moderate" and "conservative"  
 
-
 # Ordinal logistic regression model. Model selection using AIC w/ backwards selection
 ```{r, eval=T, echo=F, include=T}
 # Build initial ordinal logistic regression model with all potential variables included
@@ -1258,14 +1232,14 @@ or <- round(coef(fit1_OLR), 4)
 # convert coefficients into odds ratio, combine with CIs
 round(exp(cbind(OR = or, ci)), 4)
 ```
-Non-significant predictors:
-age
-desc role model norms
-sr_10 harm you personally
+*Non-significant predictors:*
+Age
+Descriptive norms related to role models
+Belief on whether CC will harm you personally (sr_10 harm you personally)
 
-Significant predictors, coefficients, and proportional odds ratios, in descending order of leverage:
+*Significant predictors, coefficients, and proportional odds ratios, in descending order of leverage:*
 Descriptive Contact Norms: 0.77
-For a one unit increase in composite variable of CIM Benefits, the odds of moving from "no contact" to "one contact" or "more than one contact" (in the last twelve months) are 2.17 times greater, given that the other variables in the model are held constant.
+For a one unit increase in the composite variable of descriptive contact norms, the odds of moving from "no contact" to "one contact" or "more than one contact" (in the last twelve months) are 2.17 times greater, given that the other variables in the model are held constant.
 
 CIM Benefits (interpersonal discussion / hearing about CC): 0.58
 For a one unit increase in composite variable of CIM Benefits, the odds of moving from "no contact" to "one contact" or "more than one contact" (in the last twelve months) are 1.78 times greater, given that the other variables in the model are held constant.
@@ -1282,22 +1256,67 @@ For a one unit increase in composite variable of CIM Benefits, the odds of movin
 sr_41 Human ingenuity will ensure we do not make the Earth unlivable: -0.35
 For a one unit increase in composite variable of CIM Benefits, the odds of moving from "no contact" to "one contact" or "more than one contact" (in the last twelve months) are 0.70 times greater, given that the other variables in the model are held constant.
 
+*Discussion*
+Descriptive Contact Norms, CIM Benefits, Perceived Risk, Injunctive Contact Norms all have a positive effect on propensity to contact officials. The more a person perceives positive descriptive norms related to contacting officials; perceives positive injunctive norms related to contacting officials; hears about CC from friends, media, & public figures; or perceives CC as a risk, the more likely they are to contact officials. It's interesting that hearing about CC more often (through interpersonal discussion, mass media, or from public figures) is predictive of contacting officials along with the other more intuitive factors. 
 
-Descriptive Contact Norms, CIM Benefits, Perceived Risk, Injunctive Contact Norms all have a positive effect on propensity to contact officials. The more a person perceives positive descriptive norms related to contacting officials; perceives positive injunctive norms related to contacting officials; hears about CC from friends, media, & public figures; or perceives CC as a risk, the more likely they are to contact officials. 
+Conversely, the more a person believes CC will harm future generations or the more they agree with the statement that "human ingenuity will ensure we do not make the Earth unlivable", the less likely they are to contact officials. The first could be explained by the person believing that CC is more an issue for the distant future; if CC will only harm future generations, why bother contacting officials now? Additionally, the ecological worldview that human ingenuity will solve CC may align with a person thinking CC is more a technological problem than a social one, and this worldview may align with the person perceiving less risk from CC since they see CC as a problem that will inevitably be solved by human innovation. 
 
-Conversely, the more a person believes CC will harm future generations or the more they agree with the statement that "human ingenuity will ensure we do not make the Earth unlivable", the less likely they are to contact officials. 
-
-
-
+$$\\[.05in]$$
 ## Checking OLR assumptions
+#### Multi-collinearity
 ```{r, eval=T, echo=F, include=T}
 # social norms factors
-ggpairs(OLR_complete_cases[, c(2:6)], title = "Correlation Plot between each Variable")
+ggpairs(OLR_complete_cases[, c(2:6)], title = "Correlation Plot between social norms variables")
 
-# all other continuous factors/variables
-ggpairs(OLR_complete_cases[, c(7:13)], title = "Correlation Plot between each Variable")
+# cimbenefits, perceivedrisk, personal harm, future generations harm, efficacy - contacting officials, efficacy - effectiveness orgs, efficacy - competency/responsiveness orgs
+ggpairs(OLR_complete_cases[, c(7:13)], title = "Correlation Plot")
 
+#  behavioral attitudes, easy/able to call
+ggpairs(OLR_complete_cases[, c(14:19)], title = "Correlation Plot")
 
+# worldviews
+ggpairs(OLR_complete_cases[, c(20:25)], title = "Correlation Plot")
+
+# Variable inflation factor test. Need to double-check that the "No intercept: vifs may not be sensible" warning msg isn't throwing things off. 
+car::vif(fit1_OLR)
+```
+ 
+#### Parallel regression assumption via Brant's test 
+```{r, eval=T, echo=F, include=T}
+# install.packages("brant")
+# install.packages("generalhoslem")
+library(broom)
+library(brant)
+library(generalhoslem)
+
+# Testing parallel regression assumption
+# If the relationship between all pairs of groups is the same, then there is only one set of coefficient, which means that there is only one model. If this assumption is violated, different models are 
+# needed to describe the relationship between each pair of outcome groups.
+# A p-value of less than 0.05 on this test, particularly on the Omnibus plus at least one of the variables, should be interpreted as a failure of the proportional odds assumption.
+brant(fit1_OLR)
+
+```
+
+#### Lipsitz test for model goodness-of-fit
+```{r, eval=T, echo=F, include=T}
+# Since the null hypothesis is a good model fit, low p-values indicate potential problems with the model.
+# generalhoslem::lipsitz.test(fit1_OLR)
+
+# Need to work on the vector of categorical variables somehow
+# cats <- c("race_white_dumvar", "gender_dumvar", "children_dumvar", "sr_75_religion_dumvar", "sr_56_marital_status", "sr_61_education", "sr_71_employment_status", "sr_72_income","sr_78_political_affiliation","sr_79_political_leaning","sr_7_believe_about_climate_change")
+
+# generalhoslem::pulkrob.chisq(fit1_OLR, catvars = c("race_white_dumvar", "gender_dumvar", "children_dumvar", "sr_75_religion_dumvar", "sr_56_marital_status", "sr_61_education", "sr_71_employment_status", "sr_72_income","sr_78_political_affiliation","sr_79_political_leaning","sr_7_believe_about_climate_change"))
+```
+
+#### Influential factors / outliers via Cook's Distance
+```{r, eval=T, echo=F, include=T}
+# Cook's Distance test that I haven't figured out yet. 
+# plot(fit1_OLR, which = 4, id.n = 3)
+# 
+# model.data <- augment(fit1_OLR) %>% 
+#   mutate(index = 1:n())
+# 
+# model.data %>% top_n(3, .cooksd)
 ```
 
 
