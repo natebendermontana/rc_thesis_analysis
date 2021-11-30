@@ -1263,6 +1263,16 @@ Conversely, the more a person believes CC will harm future generations or the mo
 
 $$\\[.05in]$$
 ## Checking OLR assumptions
+```{r, eval=T, echo=F, include=T}
+# install.packages("brant")
+# install.packages("generalhoslem")
+# install.packages("DescTools")
+library(DescTools)
+library(broom)
+library(brant)
+library(generalhoslem)
+```
+
 #### Multi-collinearity
 ```{r, eval=T, echo=F, include=T}
 # social norms factors
@@ -1281,26 +1291,54 @@ ggpairs(OLR_complete_cases[, c(20:25)], title = "Correlation Plot")
 car::vif(fit1_OLR)
 ```
  
+# Linear Relationship assumption
+Check the linear relationship between continuous predictor variables and the logit of the outcome. 
+This can be done by visually inspecting the scatter plot between each predictor and the logit values.
+```{r, eval=F, echo=F, include=T}
+
+# Predict the probability (p) of diabete positivity
+probabilities <- predict(fit1_OLR, type = "response")
+predicted.classes <- ifelse(probabilities > 0.5, "pos", "neg")
+head(predicted.classes)
+
+mydata <- PimaIndiansDiabetes2 %>%
+  dplyr::select_if(is.numeric) 
+predictors <- colnames(mydata)
+
+# Bind the logit and tidying the data for plot
+mydata <- mydata %>%
+  mutate(logit = log(probabilities/(1-probabilities))) %>%
+  gather(key = "predictors", value = "predictor.value", -logit)
+Create the scatter plots:
+ggplot(mydata, aes(logit, predictor.value))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess") + 
+  theme_bw() + 
+  facet_wrap(~predictors, scales = "free_y") 
+```
+
+
+ 
 #### Parallel regression assumption via Brant's test 
 ```{r, eval=T, echo=F, include=T}
-# install.packages("brant")
-# install.packages("generalhoslem")
-library(broom)
-library(brant)
-library(generalhoslem)
 
 # Testing parallel regression assumption
-# If the relationship between all pairs of groups is the same, then there is only one set of coefficient, which means that there is only one model. If this assumption is violated, different models are 
+# If the relationship between all pairs of groups is the same, then there is only one set of coefficients, which means that there is only one model. If this assumption is violated, different models are 
 # needed to describe the relationship between each pair of outcome groups.
 # A p-value of less than 0.05 on this test, particularly on the Omnibus plus at least one of the variables, should be interpreted as a failure of the proportional odds assumption.
 brant(fit1_OLR)
 
+
 ```
 
-#### Lipsitz test for model goodness-of-fit
-```{r, eval=T, echo=F, include=T}
+#### Model goodness-of-fit (Lipsitz & McFadden's pseudo-R^2)
+```{r, eval=F, echo=F, include=T}
 # Since the null hypothesis is a good model fit, low p-values indicate potential problems with the model.
-# generalhoslem::lipsitz.test(fit1_OLR)
+generalhoslem::lipsitz.test(fit1_OLR)
+
+
+PseudoR2(fit1_OLR)
+
 
 # Need to work on the vector of categorical variables somehow
 # cats <- c("race_white_dumvar", "gender_dumvar", "children_dumvar", "sr_75_religion_dumvar", "sr_56_marital_status", "sr_61_education", "sr_71_employment_status", "sr_72_income","sr_78_political_affiliation","sr_79_political_leaning","sr_7_believe_about_climate_change")
@@ -1309,7 +1347,7 @@ brant(fit1_OLR)
 ```
 
 #### Influential factors / outliers via Cook's Distance
-```{r, eval=T, echo=F, include=T}
+```{r, eval=F, echo=F, include=T}
 # Cook's Distance test that I haven't figured out yet. 
 # plot(fit1_OLR, which = 4, id.n = 3)
 # 
