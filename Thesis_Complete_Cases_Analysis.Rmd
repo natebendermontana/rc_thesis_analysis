@@ -1,12 +1,12 @@
 ---
 title: "Thesis Analysis"
 author: "Nate Bender"
-date: "11/19/2021"
+date: "12/3/2021"
 note: "Nationally-representative survey; conducted Aug 3-9, 2020"
 output: html_document
 ---
 
-```{r child code extra, eval=F, include=F, echo=F}
+```{r child code and missing values extra ignore, eval=F, include=F, echo=F}
 # COMMENTING OUT THIS BLOCK OF CODE FOR NOW. CAN COME BACK TO IT LATER IF WE WANT TO GET MORE GRANULAR WITH SEPARATING CHILDREN>18 AND DEPENDENTS. 
 # # children_responded dummy var (1 category: 1==q answered, NA==question skipped)
 # d_accept <- d_accept %>%
@@ -31,48 +31,14 @@ output: html_document
 # d_accept %>% 
 #   mutate(test = ifelse(d_accept$sr_57j_adultchildren>=1 & d_accept$sr_57i_dependents>=1,1,0)) %>% 
 #   count(test)
-```
+ 
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+#
+#
+#
 
-```{r load packages and data, eval=T, include=F}
-### Packages / libraries / load data & filter rejected out 
 
-setwd("/Users/natebender/Desktop/Repo/RCthesisanalysis/")
-# install.packages("ltm")
-# install.packages("fBasics")
-# install.packages("ggcorrplot")
-# install.packages("fastDummies")
-library(psych)
-library(tidyverse)
-library(dplyr)
-library(ggplot2)
-library(GGally)
-library(ggfortify)
-library(GPArotation)
-library(ltm)
-library(ggpubr)
-library(fBasics)
-library(ggcorrplot)
-library(car)
-library(fastDummies)
-library(MASS)
-library(Hmisc)
-library(car)
-
-# Load data, create second dataset of only accepted responses
-d <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/dyn_national_20200828 - results-20200930-082116_NEW.csv")
-
-d_accept <- d %>% 
-  dplyr::filter(reject == 0)
-```
-
-```{r check missing data, eval=F, echo=F, include=F}
 ### Checking missing values
-
-
 # # Checking for missing values across all variables. 
 # # Pulled this code randomly from internet. No idea how it works. 
 # 
@@ -206,6 +172,59 @@ d_accept <- d %>%
 # p_missing <- unlist(lapply(OLRcompvarsmissing, function(x) sum(is.na(x))))/nrow(d_accept)
 # sort(p_missing[p_missing > 0], decreasing = TRUE)
 
+
+```
+
+```{r setup, include=F}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load packages and data, eval=T, echo=F, include=F}
+### Packages / libraries / load data & filter rejected out 
+
+setwd("/Users/natebender/Desktop/Repo/RCthesisanalysis/")
+# install.packages("ltm")
+# install.packages("fBasics")
+# install.packages("ggcorrplot")
+# install.packages("fastDummies")
+# install.packages("brant")
+# install.packages("generalhoslem")
+# install.packages("DescTools")
+# install.packages("oglmx")
+
+library(DescTools)
+library(broom)
+library(brant)
+library(generalhoslem)
+library(tidyr)
+library(lmtest)  #lrtest
+library(nortest)  #sf.test
+library(ResourceSelection)  #hoslem.test
+library(nnet)
+library(oglmx)
+
+library(psych)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(GGally)
+library(ggfortify)
+library(ggcorrplot)
+library(ggpubr)
+
+library(GPArotation)
+library(ltm)
+library(fBasics)
+library(car)
+library(fastDummies)
+library(MASS)
+library(Hmisc)
+
+# Load data, create second dataset of only accepted responses
+d <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/dyn_national_20200828 - results-20200930-082116_NEW.csv")
+
+d_accept <- d %>% 
+  dplyr::filter(reject == 0)
 ```
 
 ## Outline
@@ -217,12 +236,14 @@ RQ1: Which explanatory variables from a variety of studies and theories are most
   
 RQ2: How might we define behaviorally oriented segments and which segments are specifically related to the climate change activism behavior “contacting elected officials”?
 
+At this point, the code only extends to RQ1. 
+
 Table of contents:  
-1) Varible renaming, cleanup, listwise deletion  
-2) EDA & description of categorical variables levels reduction  
-3) Factor analysis & composite variables creation  
-4) OLR model  
-5) Discussion of OLR results 
+1) Variable renaming & cleanup  
+2) Factor analysis & composite variables creation  
+3) EDA & description of categorical variables levels reduction  
+4) Listwise deletion & description of final dataset for analysis
+5) Regression modelling approaches
 
 
 ## Variable renaming, cleanup, listwise deletion
@@ -244,11 +265,11 @@ d_accept <- d_accept %>%
 # Remove everyone under 18 years of age
 d_accept <- subset(d_accept, age_true>=18)
 
-# Convert RV (12a) past contact to a factor and assign labels
-d_accept$sr_12a_actions_contacted_officials <- factor(d_accept$sr_12a_actions_contacted_officials, ordered=TRUE, levels <- c(1, 2, 3))
-d_accept$sr_12a_actions_contacted_officials <- recode_factor(d_accept$sr_12a_actions_contacted_officials, "1"="nocontact", "2"="once", "3"="moreonce")
+# Convert RV (12a) past contact to an ordered factor and assign labels
+d_accept$sr_12a_actions_contacted_officials <- recode_factor(d_accept$sr_12a_actions_contacted_officials, "1"="nocontact", "2"="once", "3"="morethanonce")
+d_accept$sr_12a_actions_contacted_officials <- ordered(d_accept$sr_12a_actions_contacted_officials)
 
-# Reverse code several variables so that the answer options make sense quantitatively
+# Reverse code several variables so that the answer options make sense quantitatively and are consistent with rest of survey structure
 # 3, 8, 9, 10, 11, 24, 25, 26
 d_accept <- d_accept %>% 
   mutate(sr_3b_importance_climatechange_reversed = car::recode(sr_3b_importance_climatechange, "1=5 ; 2=4 ; 3=3 ; 4=2 ; 5=1"),
@@ -354,8 +375,8 @@ d_accept <- d_accept %>%
   mutate(
     descdynamicnorms_comp = rowMeans(subset(d_accept[, c("sr_24_past_contact", "sr_25_future_contact")], na.rm=T)))
 
-test <- d_accept %>% 
-  dplyr::select(descdynamicnorms_comp, sr_24_past_contact, sr_25_future_contact)
+# test <- d_accept %>% 
+ # dplyr::select(descdynamicnorms_comp, sr_24_past_contact, sr_25_future_contact)
 ```
 Correlation test of the two dynamic norms items shows moderate positive correlation, with Spearman's rho of `r res$estimate` and p-value of `r res$p.value`.
 
@@ -955,6 +976,8 @@ Reduced levels:
 # "some college" and "assoc deg" -> "somecollege"
 # bach deg and graduate deg stay as-is
 d_accept$sr_61_education <- recode_factor(d_accept$sr_61_education, "1"="assocdeg_orlower", "2"="assocdeg_orlower", "3"="assocdeg_orlower", "4"="assocdeg_orlower", "5"="bachelordeg", "6"="graduatedeg")
+d_accept$sr_61_education <- ordered(d_accept$sr_61_education)  # put back into order after reducing levels
+
 # levels(OLR_complete_cases$sr_61_education)
 table_1 <- table(d_accept$sr_12a_actions_contacted_officials, d_accept$sr_61_education)
 # total responses by religion type
@@ -1017,6 +1040,8 @@ over 150 -> "over150k"
 # 100-150 -> stays as-is
 # over 150 -> "over150k"
 d_accept$sr_72_income <- recode_factor(d_accept$sr_72_income, "1"="under100k", "2"="under100k", "3"="under100k", "4"="under100k", "5"="100_150k", "6"="over150k", "7"="over150k", "8"="over150k", "9"="over150k")
+d_accept$sr_72_income <- ordered(d_accept$sr_72_income)
+
 # levels(OLR_complete_cases$sr_72_income)[levels(OLR_complete_cases$sr_72_income)=="9"] <- NA
 table_1 <- table(d_accept$sr_12a_actions_contacted_officials, d_accept$sr_72_income)
 # total responses by religion type
@@ -1159,7 +1184,7 @@ Respondents were balanced gender-wise, with 48.9% male and 48.7% female, but whi
 The response variable for this analysis is #12a: "In the last twelve months, how many times have you taken the following actions related to climate change?  
 Answer option: Contacted elected officials via mail, email, or phone to urge them to take action to reduce climate change."
 
-All explanatory variables were treated as continuous, except for the following categorical vars which were reduced to the following smaller number of factor levels in order to have enough responses per level for analysis.  
+All explanatory variables were treated as continuous, except for the following categorical vars which were reduced to the following smaller number of factor levels in order to have enough responses per level for analysis. All of the below are treated as unordered except for Income and Education.  
   
 - #7: What do you believe about climate change?: Left as-is  
 - Race: Reduced to "white" and "other"  
@@ -1173,10 +1198,22 @@ All explanatory variables were treated as continuous, except for the following c
 - Political party affiliation: Reduced to "democrat" "republican" "independent" and "other"  
 - Political ideology: Reduced to "liberal" "moderate" and "conservative"  
 
-# Ordinal logistic regression model. Model selection using AIC w/ backwards selection
-```{r, eval=T, echo=F, include=T}
+
+## Attn John — Notes on modelling section
+Based on my ordinal response variable (“how many times have you contacted elected officials re climate change in last 12 months”), it appears that fitting an ordinal logistic regression model is the preferential choice. I did that, but the model fails the Brant test of proportional odds, which as I understand it is a fundamental assumption of this approach and indicates that my data do not work for this approach. 
+
+So, I’ve briefly looked at three other approaches: fitting a Multinomial Logistic Regression, something called a Generalized Ordered Logistic Regression, a Penalized Logistic Regression via Cyclic Coordinate Descent and finally a General Linear Model. 
+
+I feel very lost in the weeds though for really understanding the applicability of these different approaches for my data, the different ways to test the assumptions & GOF for each approach, and even why the data does not appear to be applicable for the ordinal logistic regression approach in the first place. I’ve spent several hours trying to understand all this better, but can’t quite figure it out yet.
+
+I believe because my data doesn't meet the proportional odds assumption, the preferred approach is then either using a multinomial logistic regression model, or a generalized ordered logistic regression. But I'm not sure. Any help seeing the forest for the trees here would be extremely appreciated! 
+
+Help!
+
+### Ordinal logistic regression. model selection using AIC w/ backwards selection
+```{r, eval=T, echo=F, include=F}
 # Build initial ordinal logistic regression model with all potential variables included
-ord_reg_model <- polr(OLR_complete_cases$sr_12a_actions_contacted_officials ~ 
+OLR_saturated <- polr(OLR_complete_cases$sr_12a_actions_contacted_officials ~ 
                         age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
                         sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
                         sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
@@ -1194,22 +1231,20 @@ ord_reg_model <- polr(OLR_complete_cases$sr_12a_actions_contacted_officials ~
                         sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
                         sr_41e_govt_do_more + sr_41f_equity,data = OLR_complete_cases, Hess = T)
 
-summary(ord_reg_model)
-
-fit1_OLR <- stepAIC(ord_reg_model, direction="backward")
+OLR_aic <- stepAIC(OLR_saturated, direction="backward")
 ```
 
 $$\\[.05in]$$
 #### Break out final model for readability
 ```{r, eval=T, echo=F, include=T}
-fit1_OLR
+summary(OLR_aic)
 ```
 
 $$\\[.05in]$$
 #### Interpreting final model coefficients and intercepts
 ```{r, eval=F, echo=F, include=T}
 # get the p-values from the final model and store the coefficient table
-ctable <- round(coef(summary(fit1_OLR)), 4)
+ctable <- round(coef(summary(OLR_aic)), 4)
 # calculate and store p-values
 p <- pnorm(abs(ctable[, "t value"]), lower.tail = F) * 2
 # combine coefficient table and p-values table
@@ -1226,11 +1261,18 @@ p <- pnorm(abs(ctable[, "t value"]), lower.tail = F) * 2
 
 # get confidence intervals
 # profiled CIs
-ci <- round(confint(fit1_OLR), 4)
+ci <- round(confint(OLR_aic), 4)
 # log odd coefficients
-or <- round(coef(fit1_OLR), 4)
+or <- round(coef(OLR_aic), 4)
 # convert coefficients into odds ratio, combine with CIs
 round(exp(cbind(OR = or, ci)), 4)
+
+# Visualizing the variable coefficients
+install.packages("jtools")
+install.packages("ggstance")
+library(ggstance)
+library(jtools)
+jtools::plot_summs(OLR_aic, scale = TRUE, plot.distributions = TRUE, inner_ci_level = .9)
 ```
 *Non-significant predictors:*
 Age
@@ -1262,93 +1304,82 @@ Descriptive Contact Norms, CIM Benefits, Perceived Risk, Injunctive Contact Norm
 Conversely, the more a person believes CC will harm future generations or the more they agree with the statement that "human ingenuity will ensure we do not make the Earth unlivable", the less likely they are to contact officials. The first could be explained by the person believing that CC is more an issue for the distant future; if CC will only harm future generations, why bother contacting officials now? Additionally, the ecological worldview that human ingenuity will solve CC may align with a person thinking CC is more a technological problem than a social one, and this worldview may align with the person perceiving less risk from CC since they see CC as a problem that will inevitably be solved by human innovation. 
 
 $$\\[.05in]$$
-## Checking OLR assumptions
-```{r, eval=T, echo=F, include=T}
-# install.packages("brant")
-# install.packages("generalhoslem")
-# install.packages("DescTools")
-library(DescTools)
-library(broom)
-library(brant)
-library(generalhoslem)
-```
-
 #### Multi-collinearity
 ```{r, eval=T, echo=F, include=T}
 # social norms factors
 ggpairs(OLR_complete_cases[, c(2:6)], title = "Correlation Plot between social norms variables")
 
 # cimbenefits, perceivedrisk, personal harm, future generations harm, efficacy - contacting officials, efficacy - effectiveness orgs, efficacy - competency/responsiveness orgs
-ggpairs(OLR_complete_cases[, c(7:13)], title = "Correlation Plot")
+ggpairs(OLR_complete_cases[, c(7:13)], title = "1/3 vars Correlation Plot")
 
 #  behavioral attitudes, easy/able to call
-ggpairs(OLR_complete_cases[, c(14:19)], title = "Correlation Plot")
+ggpairs(OLR_complete_cases[, c(14:19)], title = "2/3 vars Correlation Plot")
 
 # worldviews
-ggpairs(OLR_complete_cases[, c(20:25)], title = "Correlation Plot")
+ggpairs(OLR_complete_cases[, c(20:25)], title = "3/3 vars Correlation Plot")
 
 # Variable inflation factor test. Need to double-check that the "No intercept: vifs may not be sensible" warning msg isn't throwing things off. 
-car::vif(fit1_OLR)
-```
- 
-# Linear Relationship assumption
-Check the linear relationship between continuous predictor variables and the logit of the outcome. 
-This can be done by visually inspecting the scatter plot between each predictor and the logit values.
-```{r, eval=F, echo=F, include=T}
-
-# Predict the probability (p) of diabete positivity
-probabilities <- predict(fit1_OLR, type = "response")
-predicted.classes <- ifelse(probabilities > 0.5, "pos", "neg")
-head(predicted.classes)
-
-mydata <- PimaIndiansDiabetes2 %>%
-  dplyr::select_if(is.numeric) 
-predictors <- colnames(mydata)
-
-# Bind the logit and tidying the data for plot
-mydata <- mydata %>%
-  mutate(logit = log(probabilities/(1-probabilities))) %>%
-  gather(key = "predictors", value = "predictor.value", -logit)
-Create the scatter plots:
-ggplot(mydata, aes(logit, predictor.value))+
-  geom_point(size = 0.5, alpha = 0.5) +
-  geom_smooth(method = "loess") + 
-  theme_bw() + 
-  facet_wrap(~predictors, scales = "free_y") 
+# Below 2 should be the cutoff for showing no evidence of collinearity. This is violated. 
+car::vif(OLR_aic)
 ```
 
 
- 
 #### Parallel regression assumption via Brant's test 
 ```{r, eval=T, echo=F, include=T}
 
 # Testing parallel regression assumption
-# If the relationship between all pairs of groups is the same, then there is only one set of coefficients, which means that there is only one model. If this assumption is violated, different models are 
-# needed to describe the relationship between each pair of outcome groups.
+# If the relationship between all pairs of groups is the same, then there is only one set of coefficients, which means that there is only one model. If this assumption is violated, different models are needed to describe the relationship between each pair of outcome groups.
 # A p-value of less than 0.05 on this test, particularly on the Omnibus plus at least one of the variables, should be interpreted as a failure of the proportional odds assumption.
-brant(fit1_OLR)
+brant(OLR_aic)
+
+# If the proportional odds assumption is not met, one can use a multinomial logistic regression model, an adjacent-categories logistic model, or a partial proportional odds model.
 
 
+# Second approach to test the parallel lines assumption visually. 
+# Code from the web. Needs tweaking. 
+
+# # Predict the probability (p) of diabete positivity
+# probabilities <- predict(fit1_OLR, type = "response")
+# predicted.classes <- ifelse(probabilities > 0.5, "pos", "neg")
+# head(predicted.classes)
+# 
+# mydata <- PimaIndiansDiabetes2 %>%
+#   dplyr::select_if(is.numeric) 
+# predictors <- colnames(mydata)
+# 
+# # Bind the logit and tidying the data for plot
+# mydata <- mydata %>%
+#   mutate(logit = log(probabilities/(1-probabilities))) %>%
+#   gather(key = "predictors", value = "predictor.value", -logit)
+# Create the scatter plots:
+# ggplot(mydata, aes(logit, predictor.value))+
+#   geom_point(size = 0.5, alpha = 0.5) +
+#   geom_smooth(method = "loess") + 
+#   theme_bw() + 
+#   facet_wrap(~predictors, scales = "free_y") 
 ```
+The Omnibus shows a probability of 0, along with desccontactnorms_all_comp (p=.02), failing the Brant test / proportional odds assumption. This means that something other than the ordinal linear regression approach must be used. 
 
 #### Model goodness-of-fit (Lipsitz & McFadden's pseudo-R^2)
 ```{r, eval=F, echo=F, include=T}
+# The Lipsitz test is a goodness of fit test for ordinal response logistic regression models.
 # Since the null hypothesis is a good model fit, low p-values indicate potential problems with the model.
-generalhoslem::lipsitz.test(fit1_OLR)
+generalhoslem::lipsitz.test(OLR_aic)
 
-
-PseudoR2(fit1_OLR)
-
+# values of .2 to .4 for the McF's pseudo-R^2 represent an excellent fit.
+PseudoR2(OLR_aic)
 
 # Need to work on the vector of categorical variables somehow
 # cats <- c("race_white_dumvar", "gender_dumvar", "children_dumvar", "sr_75_religion_dumvar", "sr_56_marital_status", "sr_61_education", "sr_71_employment_status", "sr_72_income","sr_78_political_affiliation","sr_79_political_leaning","sr_7_believe_about_climate_change")
 
 # generalhoslem::pulkrob.chisq(fit1_OLR, catvars = c("race_white_dumvar", "gender_dumvar", "children_dumvar", "sr_75_religion_dumvar", "sr_56_marital_status", "sr_61_education", "sr_71_employment_status", "sr_72_income","sr_78_political_affiliation","sr_79_political_leaning","sr_7_believe_about_climate_change"))
 ```
+Lipsitz test of p=.03; low p-value indicate likely problems with the model. However a McFadden's pseudo R^2 indicates great model fit? Don't know how to interpret that wrinkle in light of the model failing the Lipsitz test and the Brant test. 
+
 
 #### Influential factors / outliers via Cook's Distance
 ```{r, eval=F, echo=F, include=T}
-# Cook's Distance test that I haven't figured out yet. 
+# Cook's Distance test that I haven't figured out yet for OLR. 
 # plot(fit1_OLR, which = 4, id.n = 3)
 # 
 # model.data <- augment(fit1_OLR) %>% 
@@ -1358,6 +1389,198 @@ PseudoR2(fit1_OLR)
 ```
 
 
+### Multinommial Logistic Regression
+```{r, eval=T, echo=F, include=F}
+
+# Variables that went into the OLR model
+multinom_saturated <- multinom(data=OLR_complete_cases, sr_12a_actions_contacted_officials ~ 
+                        age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
+                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
+                        sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
+                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
+                        descdynamicnorms_comp + desccontactnorms_all_comp +
+                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
+                        injunctmotivation_all_comp + cimbenefits_comp + 
+                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
+                        sr_11_harm_future_generations_reversed +
+                        sr_21a_effective_actions_contacting_officials +
+                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
+                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
+                        behatt_coolexcitingeasy_comp + 
+                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
+                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
+                        sr_41e_govt_do_more + sr_41f_equity)
 
 
+multinom_aic <- stepAIC(multinom_saturated, direction="backward")
+
+# From UCLA: diagnostics and model fit: 
+# Unlike logistic regression where there are many statistics for performing model diagnostics, it is not as straightforward to do diagnostics with multinomial logistic regression models. For the purpose of detecting outliers or influential data points, one can run separate logit models and use the diagnostics tools on each model.
+```
+
+```{r, eval=T, echo=F, include=T}
+summary(multinom_aic)
+```
+
+
+### General Linear Model Regression (continuous RV)
+```{r, eval=T, echo=F, include=F}
+# Try the GLM approach as well. 
+glm_saturated <- glm(data=OLR_complete_cases, as.numeric(sr_12a_actions_contacted_officials) ~ 
+                        age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
+                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
+                        sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
+                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
+                        descdynamicnorms_comp + desccontactnorms_all_comp +
+                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
+                        injunctmotivation_all_comp + cimbenefits_comp + 
+                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
+                        sr_11_harm_future_generations_reversed +
+                        sr_21a_effective_actions_contacting_officials +
+                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
+                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
+                        behatt_coolexcitingeasy_comp + 
+                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
+                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
+                        sr_41e_govt_do_more + sr_41f_equity)
+
+glm_model_aic <- stepAIC(glm_saturated, direction="backward")
+
+
+lrtest(glm_model_aic) #sig diff from null model, which is good
+
+par(mfrow=c(2,2))  #this command creates a plot grid with 2 rows and 2 columns to view the diagnostic plots all at once
+plot(glm_model_aic)  #residuals vs fitted looks great, q-q plot is windy but normality is less important, 
+#the residuals vs leverage is the one that shows you Cook's D. It plots Cook's D as a dotted line (if you can't see a dotted line that's great!)
+#any points outside of the Cook's D dotted line might be high leverage points.
+
+## normality via Shapiro_Francia test
+# If the value of p is equal to or less than 0.05, then the hypothesis of normality will be rejected by the Shapiro test.
+sf.test(glm_model_aic$resid) #significantly different from normal... ugh that sucks, but normality assumption can be okay to break
+
+#Hosmer-Lemeshow GOF test --> sensitive to group number, not good for binary predictors
+#https://stats.stackexchange.com/questions/186219/how-many-groups-to-use-in-hosmer-and-lemeshow-test
+# create numeric RV for HL GOF test
+OLR_complete_cases <- OLR_complete_cases %>%
+  mutate(sr_12a_actions_contacted_officials_numeric = as.numeric(OLR_complete_cases$sr_12a_actions_contacted_officials))
+
+# The for loop runs the test for group sizes 4 to 15
+for (i in 4:15) {
+  print(hoslem.test(OLR_complete_cases$sr_12a_actions_contacted_officials_numeric, fitted(glm_model_aic), g=i) $p.value)
+} #no sig values for any of the group sizes --> indicate that there is no evidence of poor model fit
+
+```
+
+```{r, eval=T, echo=F, include=T}
+# Compare models
+summary(glm_model_aic)
+summary(multinom_aic)
+summary(OLR_aic)
+```
+
+### Penalized Logistic Regression via cyclic coordinate descent
+```{r, eval=T, echo=F, include=T}
+
+#[ https://www.rdocumentation.org/packages/CDLasso/versions/1.1/topics/logit.reg ] 
+# use example: https://rpubs.com/Lajobu/o_choice_logit
+# logit.reg performs an algorithm for estimating regression coefficients in a penalized logistic regression model. The algorithm is based on cyclic coordinate descent.
+
+ologit_saturated = logit.reg(sr_12a_actions_contacted_officials ~ age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
+                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
+                        sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
+                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
+                        descdynamicnorms_comp + desccontactnorms_all_comp +
+                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
+                        injunctmotivation_all_comp + cimbenefits_comp + 
+                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
+                        sr_11_harm_future_generations_reversed +
+                        sr_21a_effective_actions_contacting_officials +
+                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
+                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
+                        behatt_coolexcitingeasy_comp + 
+                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
+                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
+                        sr_41e_govt_do_more + sr_41f_equity, data=OLR_complete_cases)
+
+# AIC doesn't appear to work with the oglmx model approach. Need to investigate. 
+# ologit_model_aic <- stepAIC(ologit_saturated, direction="backward")
+
+summary(ologit_saturated)
+
+# Margins call not working yet. Need to investigate. 
+# options(scipen=999)
+# margins.oglmx(ologit_saturated)
+
+```
+
+### Generalized Ordered Logistic Regression
+```{r, eval=T, echo=F, include=T}
+# Ordered models such as ordered probit and ordered logit presume that the error variance is constant across observations. In the case that this assumption does not hold estimates of marginal effects are typically biased (Weiss (1997)). The oglmx package allows for generalization of ordered probit and ordered logit models by allowing the user to specify a model for the variance. Furthermore, the package includes functions to calculate the marginal effects.
+
+# Usage example/questions: https://stackoverflow.com/questions/61328112/interpretation-of-oglmx-output-heteroscedastic-ordered-probit-regression
+# Paper on oglmx package / approach: https://mran.microsoft.com/snapshot/2016-10-12/web/packages/oglmx/vignettes/oglmxVignette.pdf
+
+ologit_oglmx_saturated = oglmx(sr_12a_actions_contacted_officials ~ age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
+                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
+                        sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
+                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
+                        descdynamicnorms_comp + desccontactnorms_all_comp +
+                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
+                        injunctmotivation_all_comp + cimbenefits_comp + 
+                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
+                        sr_11_harm_future_generations_reversed +
+                        sr_21a_effective_actions_contacting_officials +
+                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
+                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
+                        behatt_coolexcitingeasy_comp + 
+                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
+                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
+                        sr_41e_govt_do_more + sr_41f_equity, data=OLR_complete_cases)
+
+# ologit_model_aic <- stepAIC(ologit_saturated, direction="backward")
+
+
+
+summary(ologit_oglmx_saturated)
+```
+
+### Second approach for doing Generalized Ordered Logistic Regression? using clm() func in ordinal pkg
+```{r, eval=T, echo=F, include=F}
+# Ordered models such as ordered probit and ordered logit presume that the error variance is constant across observations. In the case that this assumption does not hold estimates of marginal effects are typically biased (Weiss (1997)). The oglmx package allows for generalization of ordered probit and ordered logit models by allowing the user to specify a model for the variance. Furthermore, the package includes functions to calculate the marginal effects.
+
+install.packages("ordinal")
+library(ordinal)
+
+# Conceptual discussion of difference b/w OLR and generalized ordered logistic reg: https://www.theanalysisfactor.com/generalized-ordinal-logistic-regression/
+# Paper on ordinal package / Cumulative link models approach: https://cran.r-project.org/web/packages/ordinal/vignettes/clm_article.pdf
+
+clm_saturated = clm(sr_12a_actions_contacted_officials ~ age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
+                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
+                        sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
+                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
+                        descdynamicnorms_comp + desccontactnorms_all_comp +
+                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
+                        injunctmotivation_all_comp + cimbenefits_comp + 
+                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
+                        sr_11_harm_future_generations_reversed +
+                        sr_21a_effective_actions_contacting_officials +
+                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
+                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
+                        behatt_coolexcitingeasy_comp + 
+                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
+                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
+                        sr_41e_govt_do_more + sr_41f_equity, data=OLR_complete_cases)
+
+clm_saturated_aic <- stepAIC(clm_saturated, direction="backward")
+
+
+
+summary(clm_saturated_aic)
+```
+
+```{r, eval=T, echo=F, include=T}
+anova(clm_saturated_aic, type="III")
+
+# can also do Likelihood ratio tests of cumulative link models:
+```
 
