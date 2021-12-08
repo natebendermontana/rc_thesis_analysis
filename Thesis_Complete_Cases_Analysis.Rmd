@@ -283,7 +283,7 @@ d_accept <- d_accept %>%
 
 # Change all "don't know" or "don't know / does not apply" answers to NA
 d_accept <- d_accept %>% 
-  dplyr::mutate(
+  dplyr::mutate(  # check out "across()"
     sr_10_harm_you_personally = na_if(sr_10_harm_you_personally, 5),
     sr_11_harm_future_generations = na_if(sr_11_harm_future_generations, 5),
     sr_19a_contacting_officials_parents = na_if(sr_19a_contacting_officials_parents, 5),
@@ -1213,7 +1213,7 @@ Help!
 ### Ordinal logistic regression. model selection using AIC w/ backwards selection
 ```{r, eval=T, echo=F, include=F}
 # Build initial ordinal logistic regression model with all potential variables included
-OLR_saturated <- polr(OLR_complete_cases$sr_12a_actions_contacted_officials ~ 
+OLR_saturated <- polr(sr_12a_actions_contacted_officials ~ 
                         age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
                         sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
                         sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
@@ -1232,12 +1232,31 @@ OLR_saturated <- polr(OLR_complete_cases$sr_12a_actions_contacted_officials ~
                         sr_41e_govt_do_more + sr_41f_equity,data = OLR_complete_cases, Hess = T)
 
 OLR_aic <- stepAIC(OLR_saturated, direction="backward")
+
+# think as two separate approaches. 
+# fit theoretical model and evaluate. no adjustments. 
+# fit best model possible with all actions possible. 
 ```
 
 $$\\[.05in]$$
 #### Break out final model for readability
 ```{r, eval=T, echo=F, include=T}
 summary(OLR_aic)
+
+olr_aic2 <- polr(sr_12a_actions_contacted_officials ~ 
+    age_true +
+      #desccontactnorms_all_comp +
+      descrolemodelnorms_all_comp + 
+        injunctcontactnorms_all_comp +
+      cimbenefits_comp +
+      cimperceivedrisk_comp +
+        sr_10_harm_you_personally_reversed +
+      sr_11_harm_future_generations_reversed + 
+      sr_41c_ingenuity,
+    data = OLR_complete_cases,
+    Hess = T)
+
+brant(olr_aic2)
 ```
 
 $$\\[.05in]$$
@@ -1326,7 +1345,7 @@ car::vif(OLR_aic)
 
 #### Parallel regression assumption via Brant's test 
 ```{r, eval=T, echo=F, include=T}
-
+library(brant)
 # Testing parallel regression assumption
 # If the relationship between all pairs of groups is the same, then there is only one set of coefficients, which means that there is only one model. If this assumption is violated, different models are needed to describe the relationship between each pair of outcome groups.
 # A p-value of less than 0.05 on this test, particularly on the Omnibus plus at least one of the variables, should be interpreted as a failure of the proportional odds assumption.
@@ -1520,7 +1539,7 @@ summary(ologit_saturated)
 # Usage example/questions: https://stackoverflow.com/questions/61328112/interpretation-of-oglmx-output-heteroscedastic-ordered-probit-regression
 # Paper on oglmx package / approach: https://mran.microsoft.com/snapshot/2016-10-12/web/packages/oglmx/vignettes/oglmxVignette.pdf
 
-ologit_oglmx_saturated = oglmx(sr_12a_actions_contacted_officials ~ age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
+ologit_oglmx_saturated <- oglmx(sr_12a_actions_contacted_officials ~ age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
                         sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
                         sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
                         sr_79_political_leaning + sr_7_believe_about_climate_change + 
