@@ -42,8 +42,6 @@ library(Hmisc)
 library(ROCR)
 library(plotROC)
 library(pROC)
-# install.packages("plotROC")
-
 ```
 
 ## Outline
@@ -62,12 +60,6 @@ Table of contents:
 
 ```{r, eval=T, echo=F, include=T}
 regression_clean <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/cleandata/perenial_complete_for_analysis.csv", header=TRUE, stringsAsFactors = TRUE)
-
-
-# ADVICE FROM JOHN C
-# think as two separate approaches. 
-# fit theoretical model and evaluate. no adjustments. 
-# fit best model possible with all actions possible. 
 
 ```
 
@@ -90,30 +82,30 @@ describe(regression_clean$sr_12a_actions_contacted_officials_binary)
 ```
 ### Partitioning into training/test data
 ```{r, eval=T, echo=F, include=F}
-# Training set: 75% of the sample size
-smp_size <- floor(0.75 * nrow(regression_clean))
-
-## set the seed to make your partition reproducible
-set.seed(123456)
-train_ind <- sample(seq_len(nrow(regression_clean)), size = smp_size)
-
-train <- regression_clean[train_ind, ]
-test <- regression_clean[-train_ind, ]
+# # Training set: 75% of the sample size
+# smp_size <- floor(0.75 * nrow(regression_clean))
+# 
+# ## set the seed to make your partition reproducible
+# set.seed(123456)
+# train_ind <- sample(seq_len(nrow(regression_clean)), size = smp_size)
+# 
+# train <- regression_clean[train_ind, ]
+# test <- regression_clean[-train_ind, ]
 
 ```
 
 ```{r, eval=T, echo=F, include=F}
 # set reference groups for regression
-train$race_white_dumvar <- relevel(train$race_white_dumvar, ref = "race_white")
-train$children_dumvar <- relevel(train$children_dumvar, ref = "children")
-train$sr_75_religion_dumvar <- relevel(train$sr_75_religion_dumvar, ref = "religious")
-train$gender_dumvar <- relevel(train$gender_dumvar, ref = "male")
-train$sr_56_marital_status <- relevel(train$sr_56_marital_status, ref = "married_partner")
-train$sr_61_education <- relevel(train$sr_61_education, ref = "assocdeg_orlower")
-train$sr_71_employment_status <- relevel(train$sr_71_employment_status, ref = "workfull")
-train$sr_72_income <- relevel(train$sr_72_income, ref = "under100k")
-train$sr_79_political_leaning <- relevel(train$sr_79_political_leaning, ref = "liberal")
-train$sr_7_believe_about_climate_change <- relevel(train$sr_7_believe_about_climate_change, ref = "excl_human")
+# train$race_white_dumvar <- relevel(train$race_white_dumvar, ref = "race_white")
+# train$children_dumvar <- relevel(train$children_dumvar, ref = "children")
+# train$sr_75_religion_dumvar <- relevel(train$sr_75_religion_dumvar, ref = "religious")
+# train$gender_dumvar <- relevel(train$gender_dumvar, ref = "male")
+# train$sr_56_marital_status <- relevel(train$sr_56_marital_status, ref = "married_partner")
+# train$sr_61_education <- relevel(train$sr_61_education, ref = "assocdeg_orlower")
+# train$sr_71_employment_status <- relevel(train$sr_71_employment_status, ref = "workfull")
+# train$sr_72_income <- relevel(train$sr_72_income, ref = "under100k")
+# train$sr_79_political_leaning <- relevel(train$sr_79_political_leaning, ref = "liberal")
+# train$sr_7_believe_about_climate_change <- relevel(train$sr_7_believe_about_climate_change, ref = "excl_human")
 
 ```
 
@@ -123,146 +115,325 @@ train$sr_7_believe_about_climate_change <- relevel(train$sr_7_believe_about_clim
 # 35 variables total
 # removed sr_78 political affiliation b/c highly correlated with sr_79 ideology
 
-logit_contacted <- glm(sr_12a_actions_contacted_officials_binary ~ 
-                        age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
-                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
-                        sr_71_employment_status + sr_72_income + 
-                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
-                        descdynamicnorms_comp + desccontactnorms_all_comp +
-                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
-                        injunctmotivation_all_comp + cimbenefits_comp + 
-                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
-                        sr_11_harm_future_generations_reversed +
-                        sr_21a_effective_actions_contacting_officials +
-                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
-                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
-                        behatt_coolexcitingeasy_comp + 
-                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
-                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
-                        sr_41e_govt_do_more + sr_41f_equity, data = train, family=binomial)
-
-logit_contacted_aic <- stepAIC(logit_contacted, direction="backward")
+# logit_contacted <- glm(sr_12a_actions_contacted_officials_binary ~ 
+#                         age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
+#                         sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
+#                         sr_71_employment_status + sr_72_income + 
+#                         sr_79_political_leaning + sr_7_believe_about_climate_change + 
+#                         descdynamicnorms_comp + desccontactnorms_all_comp +
+#                         descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
+#                         injunctmotivation_all_comp + cimbenefits_comp + 
+#                         cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
+#                         sr_11_harm_future_generations_reversed +
+#                         sr_21a_effective_actions_contacting_officials +
+#                         efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
+#                         behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
+#                         behatt_coolexcitingeasy_comp + 
+#                         sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
+#                         sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
+#                         sr_41e_govt_do_more + sr_41f_equity, data = train, family=binomial)
+# 
+# logit_contacted_aic <- stepAIC(logit_contacted, direction="backward")
 ```
 
 ```{r, eval=T, echo=F, include=T}
-summary(logit_contacted_aic)
+# summary(logit_contacted_aic)
 ```
 
 ```{r, eval=T, echo=F, include=T}
-pred_test <- predict(logit_contacted_aic,test,type="response")
-ROCR_pred_test <- prediction(pred_test,test$sr_12a_actions_contacted_officials_binary)
-perf <- performance(ROCR_pred_test,"lift","rpp")
-plot(perf, main="Lift curve", colorize=F)           # our baseline model is 0.75 and the actual lift is plotted as below
-
+# pred_test <- predict(logit_contacted_aic,test,type="response")
+# ROCR_pred_test <- prediction(pred_test,test$sr_12a_actions_contacted_officials_binary)
+# perf <- performance(ROCR_pred_test,"lift","rpp")
+# plot(perf, main="Lift curve", colorize=F)           # our baseline model is 0.75 and the actual lift is plotted as below
 ```
 
-```{r, eval=T, echo=F, include=F}
-# install.packages("tidymodels")
-library(tidymodels)
-
-two_class_lift <- two_class_example %>%
-  lift_curve(truth, Class1) 
-
-two_class_lift %>%
-  autoplot()
-
-two_class_lift %>%
-  group_by(.percent_tested = cut_interval(.percent_tested, n = 10)) %>%
-  summarise(.lift = mean(.lift, na.rm = TRUE)) %>%
-  ggplot(aes(.percent_tested, .lift)) +
-  geom_col() +
-  theme_bw() +
-  labs(x = "% Tested", y = "Lift")
-
-
-library(blorr)
-gt <- blr_gains_table(logit_contacted_aic)
-blr_decile_lift_chart(gt)
-```
 
 ```{r, eval=T, echo=F, include=T}
 ### TEST TEST TEST - BUILDING A DECILE-WISE LIFT CURVE
-# install.packages("devtools")
-library(devtools)
-#install_github("modelplot/modelplotr")
-#install.packages("mlr")
-library(modelplotr)
-library(caret)
-library(mlr)
 
-#score model on training data
-prob_no.contact <- stats::predict(logit_contacted_aic,newdata=train,type='response')  # create prob for each row of not having contacted, based on logit model
-prob_contact <- 1-prob_no.contact  # create prob of having contacted
-#set number of ntiles / deciles
-ntiles = 10
-# determine cutoffs
-cutoffs = c(stats::quantile(prob_contact,probs = seq(0,1,1/ntiles),na.rm = TRUE))  # creates cutoffs for deciles based on ntiles variable
-#calculate ntile values
-ntl_contact <- (ntiles+1)-as.numeric(cut(prob_contact,breaks=cutoffs,include.lowest=TRUE))  # assigns each response to appropriate quantile for contacted
-ntl_nocontact <- (ntiles+1)-ntl_contact  # same for no contact
-# create scored data frame for training data
-scores_and_ntiles <- train %>%
-  select(sr_12a_actions_contacted_officials_binary) %>%
-  mutate(model_label=factor('logistic regression'),
-         dataset_label=factor('train data'),
-         y_true=factor(sr_12a_actions_contacted_officials_binary),  # sets target variable
-         prob_contact = prob_contact,
-         prob_no.contact = prob_no.contact,
-         ntl_contact = ntl_contact,
-         ntl_nocontact = ntl_nocontact) %>%
-  select(-sr_12a_actions_contacted_officials_binary)
 
-# add test data
-#score model on test data
-prob_no.contact <- stats::predict(logit_contacted_aic,newdata=test,type='response')
-prob_contact <- 1-prob_no.contact
-#set number of ntiles
-ntiles = 10
-# determine cutoffs
-cutoffs = c(stats::quantile(prob_contact,probs = seq(0,1,1/ntiles),na.rm = TRUE))
-#calculate ntile values
-ntl_contact <- (ntiles+1)-as.numeric(cut(prob_contact,breaks=cutoffs,include.lowest=TRUE))
-ntl_nocontact <- (ntiles+1)-ntl_contact
-scores_and_ntiles <- scores_and_ntiles %>%
-  rbind(test %>%  # binds test data scores to existing "scores_and_ntiles" dataframe 
-          select(sr_12a_actions_contacted_officials_binary) %>%
-          mutate(model_label=factor('logistic regression'),
-                 dataset_label=factor('test data'),
-                 y_true=factor(sr_12a_actions_contacted_officials_binary),
-                 prob_contact = prob_contact,
-                 prob_no.contact = prob_no.contact,
-                 ntl_contact = ntl_contact,
-                 ntl_nocontact = ntl_nocontact) %>%
-          select(-sr_12a_actions_contacted_officials_binary)
-        )
-
-# TRY #1 - PLOTTING COMPARISON OF TRAINING AND TESTING MODELS
-plot_input <- plotting_scope(prepared_input = scores_and_ntiles, scope='compare_datasets')
-plot_cumgains()
-
-# TRY #2 - PLOTTING ONLY TEST MODEL
-# create scored data frame for training data
-scores_and_ntiles_test <- test %>%
-  select(sr_12a_actions_contacted_officials_binary) %>%
-  mutate(model_label=factor('logistic regression'),
-         dataset_label=factor('test data'),
-         y_true=factor(sr_12a_actions_contacted_officials_binary),  # sets target variable
-         prob_contact = prob_contact,
-         prob_no.contact = prob_no.contact,
-         ntl_contact = ntl_contact,
-         ntl_nocontact = ntl_nocontact) %>%
-  select(-sr_12a_actions_contacted_officials_binary)
-
-plot_input <- plotting_scope(
-  prepared_input = scores_and_ntiles_test,
-  scope = "no_comparison",
-  select_model_label = NA,
-  select_dataset_label = NA,
-  select_targetclass = NA,
-  select_smallest_targetclass = TRUE
-  )
+# #score model on training data
+# prob_no.contact <- stats::predict(logit_contacted_aic,newdata=train,type='response')  # create prob for each row of not having contacted, based on logit model
+# prob_contact <- 1-prob_no.contact  # create prob of having contacted
+# #set number of ntiles / deciles
+# ntiles = 10
+# # determine cutoffs
+# cutoffs = c(stats::quantile(prob_contact,probs = seq(0,1,1/ntiles),na.rm = TRUE))  # creates cutoffs for deciles based on ntiles variable
+# #calculate ntile values
+# ntl_contact <- (ntiles+1)-as.numeric(cut(prob_contact,breaks=cutoffs,include.lowest=TRUE))  # assigns each response to appropriate quantile for contacted
+# ntl_nocontact <- (ntiles+1)-ntl_contact  # same for no contact
+# # create scored data frame for training data
+# scores_and_ntiles <- train %>%
+#   select(sr_12a_actions_contacted_officials_binary) %>%
+#   mutate(model_label=factor('logistic regression'),
+#          dataset_label=factor('train data'),
+#          y_true=factor(sr_12a_actions_contacted_officials_binary),  # sets target variable
+#          prob_contact = prob_contact,
+#          prob_no.contact = prob_no.contact,
+#          ntl_contact = ntl_contact,
+#          ntl_nocontact = ntl_nocontact) %>%
+#   select(-sr_12a_actions_contacted_officials_binary)
+# 
+# # add test data
+# #score model on test data
+# prob_no.contact <- stats::predict(logit_contacted_aic,newdata=test,type='response')
+# prob_contact <- 1-prob_no.contact
+# #set number of ntiles
+# ntiles = 10
+# # determine cutoffs
+# cutoffs = c(stats::quantile(prob_contact,probs = seq(0,1,1/ntiles),na.rm = TRUE))
+# #calculate ntile values
+# ntl_contact <- (ntiles+1)-as.numeric(cut(prob_contact,breaks=cutoffs,include.lowest=TRUE))
+# ntl_nocontact <- (ntiles+1)-ntl_contact
+# scores_and_ntiles <- scores_and_ntiles %>%
+#   rbind(test %>%  # binds test data scores to existing "scores_and_ntiles" dataframe 
+#           select(sr_12a_actions_contacted_officials_binary) %>%
+#           mutate(model_label=factor('logistic regression'),
+#                  dataset_label=factor('test data'),
+#                  y_true=factor(sr_12a_actions_contacted_officials_binary),
+#                  prob_contact = prob_contact,
+#                  prob_no.contact = prob_no.contact,
+#                  ntl_contact = ntl_contact,
+#                  ntl_nocontact = ntl_nocontact) %>%
+#           select(-sr_12a_actions_contacted_officials_binary)
+#         )
+# 
+# # TRY #1 - PLOTTING COMPARISON OF TRAINING AND TESTING MODELS
+# plot_input <- plotting_scope(prepared_input = scores_and_ntiles, scope='compare_datasets')
+# plot_cumgains()
+# 
+# # TRY #2 - PLOTTING ONLY TEST MODEL
+# # create scored data frame for training data
+# scores_and_ntiles_test <- test %>%
+#   select(sr_12a_actions_contacted_officials_binary) %>%
+#   mutate(model_label=factor('logistic regression'),
+#          dataset_label=factor('test data'),
+#          y_true=factor(sr_12a_actions_contacted_officials_binary),  # sets target variable
+#          prob_contact = prob_contact,
+#          prob_no.contact = prob_no.contact,
+#          ntl_contact = ntl_contact,
+#          ntl_nocontact = ntl_nocontact) %>%
+#   select(-sr_12a_actions_contacted_officials_binary)
+# 
+# plot_input <- plotting_scope(
+#   prepared_input = scores_and_ntiles_test,
+#   scope = "no_comparison",
+#   select_model_label = NA,
+#   select_dataset_label = NA,
+#   select_targetclass = NA,
+#   select_smallest_targetclass = TRUE
+#   )
 
 ```
+
+```{r, eval=T, echo=F, include=T}
+# TEST - USING THE CARET PACKAGE TO MODEL SO THAT I CAN MORE SEAMLESSLY TRANSFER MODEL PREDICTIONS INTO 'MODELPLOTR' FUNCTION
+library(devtools)
+library(modelplotr)
+library(caret)
+library(glmnet)
+library(randomForest)
+
+
+# reduce dataset down to just variables needed for saturated model, in order to make code later on much cleaner. 
+data_for_regression <- regression_clean %>% 
+  select(
+    matches("sr_12a_actions_contacted_officials_binary"),
+    matches("age_true"),
+    matches("race_white_dumvar"),
+    matches("gender_dumvar"),
+    matches("children_dumvar"),
+    matches("sr_75_religion_dumvar"),
+    matches("sr_56_marital_status"),
+    matches("sr_61_education"),
+    matches("sr_71_employment_status"),
+    matches("sr_72_income"),
+    matches("sr_79_political_leaning"),
+    matches("sr_7_believe_about_climate_change"),
+    matches("descdynamicnorms_comp"),
+    matches("desccontactnorms_all_comp"),
+    matches("descrolemodelnorms_all_comp"),
+    matches("injunctcontactnorms_all_comp"),
+    matches("injunctmotivation_all_comp"),
+    matches("cimbenefits_comp"),
+    matches("cimperceivedrisk_comp"),
+    matches("sr_10_harm_you_personally_reversed"),
+    matches("sr_11_harm_future_generations_reversed"),
+    matches("sr_21a_effective_actions_contacting_officials"),
+    matches("efficacy_effectiveness_all_comp"),
+    matches("efficacy_competresp_all_comp"),
+    matches("behatt_admirablegood_comp"),
+    matches("behatt_usefulpleasantsensible_comp"),
+    matches("behatt_coolexcitingeasy_comp"),
+    matches("sr_30_easy_to_call"),
+    matches("sr_31_able_to_call"),
+    matches("sr_41a_right_to_modify"),
+    matches("sr_41b_laws_of_nature"),
+    matches("sr_41c_ingenuity"),
+    matches("sr_41d_impotent"),
+    matches("sr_41e_govt_do_more"),
+    matches("sr_41f_equity")
+    )
+
+set.seed(1234569)
+default_idx = createDataPartition(data_for_regression$sr_12a_actions_contacted_officials_binary, p = 0.75, list = FALSE)
+default_train = data_for_regression[default_idx, ]
+default_test = data_for_regression[-default_idx, ]
+
+# set reference groups for regression
+default_train$race_white_dumvar <- relevel(default_train$race_white_dumvar, ref = "race_white")
+default_train$children_dumvar <- relevel(default_train$children_dumvar, ref = "children")
+default_train$sr_75_religion_dumvar <- relevel(default_train$sr_75_religion_dumvar, ref = "religious")
+default_train$gender_dumvar <- relevel(default_train$gender_dumvar, ref = "male")
+default_train$sr_56_marital_status <- relevel(default_train$sr_56_marital_status, ref = "married_partner")
+default_train$sr_61_education <- relevel(default_train$sr_61_education, ref = "assocdeg_orlower")
+default_train$sr_71_employment_status <- relevel(default_train$sr_71_employment_status, ref = "workfull")
+default_train$sr_72_income <- relevel(default_train$sr_72_income, ref = "under100k")
+default_train$sr_79_political_leaning <- relevel(default_train$sr_79_political_leaning, ref = "liberal")
+default_train$sr_7_believe_about_climate_change <- relevel(default_train$sr_7_believe_about_climate_change, ref = "excl_human")
+
+```
+
+```{r, eval=T, echo=F, include=T}
+# 35 variables including RV
+
+ctrl <- trainControl(method = "cv", number = 5)  # five cross-validations
+
+# Logistic regression via backwards stepwise AIC selection
+logit_contacted_test <- caret::train(
+  sr_12a_actions_contacted_officials_binary ~ .,
+  data = default_train,
+  method = "glmStepAIC",
+  direction = "backward",
+  family = "binomial",
+  trControl = ctrl
+  )
+
+# Multinomial logistic regression via glmnet package
+# Extension of glm models with built-in variable selection. Uses both lasso and ridge penalization.
+mnl <- caret::train(
+  sr_12a_actions_contacted_officials_binary ~ .,
+  data = default_train, 
+  method = "glmnet",
+  trControl = ctrl
+  )
+
+
+# Random forest model 
+# random forests are an ensemble learning method for classification and regression that operate by constructing a lot of decision trees at training time and outputting the class that is the mode of the classes output by individual trees.
+rf <- caret::train(
+  sr_12a_actions_contacted_officials_binary ~ .,
+  data = default_train,
+  method = "rf",
+  trControl = ctrl
+)
+
+
+# # XGBoost
+# # xgboost only deals with numeric data — how best to manipulate data? Force all factors to numeric?
+# library(mlr)
+# library(xgboost)
+# 
+# traintask <- makeClassifTask(data = default_train, target = "sr_12a_actions_contacted_officials_binary", positive = 1)
+# testtask <- makeClassifTask(data = default_test, target = "sr_12a_actions_contacted_officials_binary")
+# 
+# xgb_learner <- makeLearner(
+#   "classif.xgboost",
+#   predict.type = "response",
+#   par.vals = list(
+#     objective = "binary:logistic",
+#     eval_metric = "error",
+#     nrounds = 200
+#   )
+# )
+# 
+# xgb_model <- train(xgb_learner, task = traintask)
+
+
+
+```
+
+```{r}
+summary(logit_contacted_test)
+```
+
+
+```{r}
+prepared_input <- prepare_scores_and_ntiles(datasets=list("default_train","default_test"),
+  dataset_labels = list("train data","test data"),
+  models = list("logit_contacted_test", "mnl", "rf"),
+  model_labels = list("LogitStepAIC", "Glmnet", "Randomforest"),
+  target_column= "sr_12a_actions_contacted_officials_binary")
+
+forplot <- plotting_scope(
+  prepared_input,
+  scope = "compare_models",
+  select_dataset_label = "test data", 
+  select_targetclass = NA)
+
+forplotindividual <- plotting_scope(
+  prepared_input,
+  select_model_label = "Randomforest", 
+  select_dataset_label = "test data", 
+  select_targetclass = NA)
+
+# all four plots together
+plot_multiplot(
+  data = forplot
+)
+
+# just cumulative lift 
+plot_cumlift(
+  data = forplot,
+  highlight_ntile = 2,
+)
+
+# just cumulative response
+plot_cumresponse(
+  data = forplot,
+  highlight_ntile = 2
+)
+```
+```{r}
+# random forest interpretation
+plot(rf)
+
+rf_predictions <- predict(rf, default_test)
+
+# "accuracy" is accuracy on training data. 
+confusionMatrix(table(default_test[,"sr_12a_actions_contacted_officials_binary"],rf_predictions))
+
+varImp(rf)
+# somehow limit to just the significant variables?
+plot(varImp(rf))
+
+
+
+```
+
+
+```{r}
+# PREDICTED V ACTUAL TESTING
+test_predicted <- predict(logit_contacted_test, default_test)
+expected <- default_test$sr_12a_actions_contacted_officials_binary
+
+table(expected)
+table(test_predicted)
+
+confusionMatrix(test_predicted, expected)
+
+# the kappa statistic is a measure of how closely the instances classified by the machine learning classifier matched the data labeled as ground truth, controlling for the accuracy of a random classifier as measured by the expected accuracy
+```
+
+```{r}
+# Variable importance
+
+# is there a way to get this to show only the significant variables in the final model?
+ggplot(varImp(logit_contacted_test))
+```
+
+
+
 
 
 ```{r}
@@ -344,21 +515,20 @@ pR2(logit_contacted_aic)
 
 
 # PREDICTED V ACTUAL TESTING
-predicted <- predict(logitMod, testData, type="response")  # predicted scores
+# predicted <- predict(logitMod, testData, type="response")  # predicted scores
 
 restrain <- predict(logit_contacted_aic, train, type="response")
 restest <- predict(logit_contacted_aic, test, type="response")
 
 # Confusion matrices for both training and test models
-confmatrix_train <- table(Actual_value=train$sr_12a_actions_contacted_officials_binary, Predicted_value = restrain > 0.5)
-confmatrix_test <- table(Actual_value=test$sr_12a_actions_contacted_officials_binary, Predicted_value = restest > 0.5)
-confmatrix_train
-confmatrix_test
+# confmatrix_train <- table(Actual_value=train$sr_12a_actions_contacted_officials_binary, Predicted_value = restrain > 0.5)
+# confmatrix_test <- table(Actual_value=test$sr_12a_actions_contacted_officials_binary, Predicted_value = restest > 0.5)
+# confmatrix_train
+# confmatrix_test
+# 
+# (confmatrix_train[[1,1]] + confmatrix_train[[2,2]]) / sum(confmatrix_train)
+# (confmatrix_test[[1,1]] + confmatrix_test[[2,2]]) / sum(confmatrix_test)
 
-(confmatrix_train[[1,1]] + confmatrix_train[[2,2]]) / sum(confmatrix_train)
-(confmatrix_test[[1,1]] + confmatrix_test[[2,2]]) / sum(confmatrix_test)
-
-# Kappa statistic
 
 # Calibration plots
 # run these on the full dataset
@@ -429,7 +599,6 @@ res
 ```
 
 ```{r}
-set.seed(123738910)
 kmean_2 <- kmeans(na.omit(evs_forclustering), 2)  # test two groups
 kmean_2$centers
 kmean_2
