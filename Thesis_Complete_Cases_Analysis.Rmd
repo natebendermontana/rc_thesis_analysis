@@ -1,7 +1,7 @@
 ---
 title: "Thesis Analysis"
 author: "Nate Bender"
-date: "1/31/2022"
+date: "2/11/2022"
 note: "Nationally-representative survey; conducted Aug 3-9, 2020"
 output: html_document
 ---
@@ -42,6 +42,9 @@ library(Hmisc)
 library(ROCR)
 library(plotROC)
 library(pROC)
+library(pscl)
+library(blorr)
+
 ```
 
 ## Outline
@@ -110,121 +113,6 @@ describe(regression_clean$sr_12a_actions_contacted_officials_binary)
 ```
 
 
-### logistic regression. model selection using AIC w/ backwards selection
-```{r, eval=T, echo=F, include=F}
-# 35 variables total
-# removed sr_78 political affiliation b/c highly correlated with sr_79 ideology
-
-# logit_contacted <- glm(sr_12a_actions_contacted_officials_binary ~ 
-#                         age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
-#                         sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
-#                         sr_71_employment_status + sr_72_income + 
-#                         sr_79_political_leaning + sr_7_believe_about_climate_change + 
-#                         descdynamicnorms_comp + desccontactnorms_all_comp +
-#                         descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
-#                         injunctmotivation_all_comp + cimbenefits_comp + 
-#                         cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
-#                         sr_11_harm_future_generations_reversed +
-#                         sr_21a_effective_actions_contacting_officials +
-#                         efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
-#                         behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
-#                         behatt_coolexcitingeasy_comp + 
-#                         sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
-#                         sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
-#                         sr_41e_govt_do_more + sr_41f_equity, data = train, family=binomial)
-# 
-# logit_contacted_aic <- stepAIC(logit_contacted, direction="backward")
-```
-
-```{r, eval=T, echo=F, include=T}
-# summary(logit_contacted_aic)
-```
-
-```{r, eval=T, echo=F, include=T}
-# pred_test <- predict(logit_contacted_aic,test,type="response")
-# ROCR_pred_test <- prediction(pred_test,test$sr_12a_actions_contacted_officials_binary)
-# perf <- performance(ROCR_pred_test,"lift","rpp")
-# plot(perf, main="Lift curve", colorize=F)           # our baseline model is 0.75 and the actual lift is plotted as below
-```
-
-
-```{r, eval=T, echo=F, include=T}
-### TEST TEST TEST - BUILDING A DECILE-WISE LIFT CURVE
-
-
-# #score model on training data
-# prob_no.contact <- stats::predict(logit_contacted_aic,newdata=train,type='response')  # create prob for each row of not having contacted, based on logit model
-# prob_contact <- 1-prob_no.contact  # create prob of having contacted
-# #set number of ntiles / deciles
-# ntiles = 10
-# # determine cutoffs
-# cutoffs = c(stats::quantile(prob_contact,probs = seq(0,1,1/ntiles),na.rm = TRUE))  # creates cutoffs for deciles based on ntiles variable
-# #calculate ntile values
-# ntl_contact <- (ntiles+1)-as.numeric(cut(prob_contact,breaks=cutoffs,include.lowest=TRUE))  # assigns each response to appropriate quantile for contacted
-# ntl_nocontact <- (ntiles+1)-ntl_contact  # same for no contact
-# # create scored data frame for training data
-# scores_and_ntiles <- train %>%
-#   select(sr_12a_actions_contacted_officials_binary) %>%
-#   mutate(model_label=factor('logistic regression'),
-#          dataset_label=factor('train data'),
-#          y_true=factor(sr_12a_actions_contacted_officials_binary),  # sets target variable
-#          prob_contact = prob_contact,
-#          prob_no.contact = prob_no.contact,
-#          ntl_contact = ntl_contact,
-#          ntl_nocontact = ntl_nocontact) %>%
-#   select(-sr_12a_actions_contacted_officials_binary)
-# 
-# # add test data
-# #score model on test data
-# prob_no.contact <- stats::predict(logit_contacted_aic,newdata=test,type='response')
-# prob_contact <- 1-prob_no.contact
-# #set number of ntiles
-# ntiles = 10
-# # determine cutoffs
-# cutoffs = c(stats::quantile(prob_contact,probs = seq(0,1,1/ntiles),na.rm = TRUE))
-# #calculate ntile values
-# ntl_contact <- (ntiles+1)-as.numeric(cut(prob_contact,breaks=cutoffs,include.lowest=TRUE))
-# ntl_nocontact <- (ntiles+1)-ntl_contact
-# scores_and_ntiles <- scores_and_ntiles %>%
-#   rbind(test %>%  # binds test data scores to existing "scores_and_ntiles" dataframe 
-#           select(sr_12a_actions_contacted_officials_binary) %>%
-#           mutate(model_label=factor('logistic regression'),
-#                  dataset_label=factor('test data'),
-#                  y_true=factor(sr_12a_actions_contacted_officials_binary),
-#                  prob_contact = prob_contact,
-#                  prob_no.contact = prob_no.contact,
-#                  ntl_contact = ntl_contact,
-#                  ntl_nocontact = ntl_nocontact) %>%
-#           select(-sr_12a_actions_contacted_officials_binary)
-#         )
-# 
-# # TRY #1 - PLOTTING COMPARISON OF TRAINING AND TESTING MODELS
-# plot_input <- plotting_scope(prepared_input = scores_and_ntiles, scope='compare_datasets')
-# plot_cumgains()
-# 
-# # TRY #2 - PLOTTING ONLY TEST MODEL
-# # create scored data frame for training data
-# scores_and_ntiles_test <- test %>%
-#   select(sr_12a_actions_contacted_officials_binary) %>%
-#   mutate(model_label=factor('logistic regression'),
-#          dataset_label=factor('test data'),
-#          y_true=factor(sr_12a_actions_contacted_officials_binary),  # sets target variable
-#          prob_contact = prob_contact,
-#          prob_no.contact = prob_no.contact,
-#          ntl_contact = ntl_contact,
-#          ntl_nocontact = ntl_nocontact) %>%
-#   select(-sr_12a_actions_contacted_officials_binary)
-# 
-# plot_input <- plotting_scope(
-#   prepared_input = scores_and_ntiles_test,
-#   scope = "no_comparison",
-#   select_model_label = NA,
-#   select_dataset_label = NA,
-#   select_targetclass = NA,
-#   select_smallest_targetclass = TRUE
-#   )
-
-```
 
 ```{r, eval=T, echo=F, include=T}
 # TEST - USING THE CARET PACKAGE TO MODEL SO THAT I CAN MORE SEAMLESSLY TRANSFER MODEL PREDICTIONS INTO 'MODELPLOTR' FUNCTION
@@ -294,273 +182,79 @@ default_train$sr_7_believe_about_climate_change <- relevel(default_train$sr_7_be
 
 ```
 
-```{r, eval=T, echo=F, include=T}
-# 35 variables including RV
+### logistic regression. model selection using AIC w/ backwards selection
+```{r, eval=T, echo=F, include=F}
+# 35 variables total
+# removed sr_78 political affiliation b/c highly correlated with sr_79 ideology
 
-ctrl <- trainControl(method = "cv", number = 5)  # five cross-validations
-
-# Logistic regression via backwards stepwise AIC selection
-logit_contacted_test <- caret::train(
-  sr_12a_actions_contacted_officials_binary ~ .,
-  data = default_train,
-  method = "glmStepAIC",
-  direction = "backward",
-  family = "binomial",
-  trControl = ctrl
-  )
-
-# Multinomial logistic regression via glmnet package
-# Extension of glm models with built-in variable selection. Uses both lasso and ridge penalization.
-mnl <- caret::train(
-  sr_12a_actions_contacted_officials_binary ~ .,
-  data = default_train, 
-  method = "glmnet",
-  trControl = ctrl
-  )
-
-
-# Random forest model 
-# random forests are an ensemble learning method for classification and regression that operate by constructing a lot of decision trees at training time and outputting the class that is the mode of the classes output by individual trees.
-rf <- caret::train(
-  sr_12a_actions_contacted_officials_binary ~ .,
-  data = default_train,
-  method = "rf",
-  trControl = ctrl
-)
+logit_contacted <- glm(sr_12a_actions_contacted_officials_binary ~
+                        age_true + race_white_dumvar + gender_dumvar + children_dumvar +
+                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education +
+                        sr_71_employment_status + sr_72_income +
+                        sr_79_political_leaning + sr_7_believe_about_climate_change +
+                        descdynamicnorms_comp + desccontactnorms_all_comp +
+                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
+                        injunctmotivation_all_comp + cimbenefits_comp +
+                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
+                        sr_11_harm_future_generations_reversed +
+                        sr_21a_effective_actions_contacting_officials +
+                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
+                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
+                        behatt_coolexcitingeasy_comp +
+                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify +
+                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent +
+                        sr_41e_govt_do_more + sr_41f_equity, data = default_train, family=binomial)
 
 
-# # XGBoost
-# # xgboost only deals with numeric data — how best to manipulate data? Force all factors to numeric?
-# library(mlr)
-# library(xgboost)
-# 
-# traintask <- makeClassifTask(data = default_train, target = "sr_12a_actions_contacted_officials_binary", positive = 1)
-# testtask <- makeClassifTask(data = default_test, target = "sr_12a_actions_contacted_officials_binary")
-# 
-# xgb_learner <- makeLearner(
-#   "classif.xgboost",
-#   predict.type = "response",
-#   par.vals = list(
-#     objective = "binary:logistic",
-#     eval_metric = "error",
-#     nrounds = 200
-#   )
-# )
-# 
-# xgb_model <- train(xgb_learner, task = traintask)
+logit_contacted_aic <- stepAIC(logit_contacted, direction="backward")
 
-
-
+# pred_test <- predict(logit_contacted_aic,test,type="response")
+# ROCR_pred_test <- prediction(pred_test,test$sr_12a_actions_contacted_officials_binary)
+# perf <- performance(ROCR_pred_test,"lift","rpp")
+# plot(perf, main="Lift curve", colorize=F)           # our baseline model is 0.75 and the actual lift is plotted as below
 ```
 
 ```{r}
-summary(logit_contacted_test)
+summary(logit_contacted_aic)
 ```
 
 
 ```{r}
-prepared_input <- prepare_scores_and_ntiles(datasets=list("default_train","default_test"),
-  dataset_labels = list("train data","test data"),
-  models = list("logit_contacted_test", "mnl", "rf"),
-  model_labels = list("LogitStepAIC", "Glmnet", "Randomforest"),
-  target_column= "sr_12a_actions_contacted_officials_binary")
-
-forplot <- plotting_scope(
-  prepared_input,
-  scope = "compare_models",
-  select_dataset_label = "test data", 
-  select_targetclass = NA)
-
-forplotindividual <- plotting_scope(
-  prepared_input,
-  select_model_label = "Randomforest", 
-  select_dataset_label = "test data", 
-  select_targetclass = NA)
-
-# all four plots together
-plot_multiplot(
-  data = forplot
+# Create decile-wise lift chart
+gt <- blr_gains_table(logit_contacted_aic)
+blr_decile_lift_chart(
+  gt,
+  xaxis_title = "Decile",
+  yaxis_title = "Decile Mean / Global Mean",
+  title = "Decile Lift Chart",
+  bar_color = "blue",
+  text_size = 3.5,
+  text_vjust = -0.3,
+  print_plot = TRUE
 )
-
-# just cumulative lift 
-plot_cumlift(
-  data = forplot,
-  highlight_ntile = 2,
-)
-
-# just cumulative response
-plot_cumresponse(
-  data = forplot,
-  highlight_ntile = 2
-)
-```
-```{r}
-# random forest interpretation
-plot(rf)
-
-rf_predictions <- predict(rf, default_test)
-
-# "accuracy" is accuracy on training data. 
-confusionMatrix(table(default_test[,"sr_12a_actions_contacted_officials_binary"],rf_predictions))
-
-varImp(rf)
-# somehow limit to just the significant variables?
-plot(varImp(rf))
-
-
-
-```
-
-
-```{r}
-# PREDICTED V ACTUAL TESTING
-test_predicted <- predict(logit_contacted_test, default_test)
-expected <- default_test$sr_12a_actions_contacted_officials_binary
-
-table(expected)
-table(test_predicted)
-
-confusionMatrix(test_predicted, expected)
 
 # the kappa statistic is a measure of how closely the instances classified by the machine learning classifier matched the data labeled as ground truth, controlling for the accuracy of a random classifier as measured by the expected accuracy
-```
-
-```{r}
-# Variable importance
-
-# is there a way to get this to show only the significant variables in the final model?
-ggplot(varImp(logit_contacted_test))
-```
-
-
-
-
-
-```{r}
-# combine linear predictor and known truth for training and test datasets into one data frame
-# df <- rbind(data.frame(predictor = predict(logit_contacted_aic, train),
-#                        known.truth = train$sr_12a_actions_contacted_officials_binary,
-#                        model = "train"),
-#             data.frame(predictor = predict(logit_contacted_aic, test),
-#                        known.truth = test$sr_12a_actions_contacted_officials_binary,
-#                        model = "test"))
-# 
-# # the aesthetic names are not the most intuitive
-# # `d` (disease) holds the known truth
-# # `m` (marker) holds the predictor values 
-# ggplot(df, aes(d = known.truth, m = predictor, color = model)) + 
-#   geom_roc(n.cuts = 0)
-
-par(pty="s")
-roc(test$sr_12a_actions_contacted_officials_binary, pred_test, plot=T, percent=T, legacy.axes=T, print.auc=T, xlab="False positive %", ylab="True positive %")
-
-# partial.auc=c(100,60), auc.polygon=T, auc.polygon.col="#377eb822",
-
+blr_confusion_matrix(logit_contacted_aic)
 
 ```
 
-
-```{r, eval=T, echo=F, include=T}
-# model significance
-## liklihood ratio tests
-lrtest(logit_contacted_aic, logit_contacted) #not sig different than saturated model, which is good. All else equal -- go with simpler model
-lrtest(logit_contacted_aic) #sig diff from null model, which is good
-
-# model diagnostics
-par(mfrow=c(2,2)) #this command creates a plot grid with 2 rows and 2 columns to view the diagnostic plots all at once
-plot(logit_contacted_aic)
-# Residuals vs fitted: Checks linear relationship. Want a horizontal line w/ no distinct patterns. VIOLATED.
-# Q-Q plot: Checks if residuals are normally distributed. VIOLATED. 
-# Scale-Location: Checks homogeneity of variance. Want a horizontal line w/ no distinct patterns. VIOLATED. 
-# Residuals vs leverage: Checks influential cases via Cook's D. It plots Cook's D as a dotted line (if you can't see a dotted line that's great!). Any points outside of the Cook's D dotted line might be high leverage points. NO VIOLATION HERE. 
-
-dev.off() #this turns the plot grid off
-
-# Linear relationship is violated. 
-# normality is violated
-# heteroscedastic
-# no influential points though
-
-
-# Add observations indices and
-# drop some columns (.se.fit, .sigma) for simplification
-model.diag.metrics <- augment(logit_contacted_aic)
-
-model.diag.metrics <- model.diag.metrics %>%
-  mutate(index = 1:nrow(model.diag.metrics)) %>%
-  select(index, everything(), -.sigma)
-# Inspect the data
-head(model.diag.metrics, 4)
-
-# check specific points according to Cook's D 
-model.diag.metrics %>%
-  top_n(3, wt = .cooksd)
-
-plot(logit_contacted_aic, 4)
-
-
-## normality
-sf.test(logit_contacted_aic$resid) #significant p-value means normality assumption is violated. 
-
-## model gof
-#Hosmer-Lemeshow GOF test --> sensitive to group number, not good for binary predictors
-#https://stats.stackexchange.com/questions/186219/how-many-groups-to-use-in-hosmer-and-lemeshow-test
-for (i in 4:15) {
-  print(hoslem.test(train$sr_12a_actions_contacted_officials_binary, fitted(logit_contacted_aic), g=i) $p.value)
-} #no sig values --> shows no evidence of poor model fit
-
-# MCFADDEN'S PSEDUO-R^2
-library(pscl)
-pR2(logit_contacted_aic)
-
-
-# PREDICTED V ACTUAL TESTING
-# predicted <- predict(logitMod, testData, type="response")  # predicted scores
-
-restrain <- predict(logit_contacted_aic, train, type="response")
-restest <- predict(logit_contacted_aic, test, type="response")
-
-# Confusion matrices for both training and test models
-# confmatrix_train <- table(Actual_value=train$sr_12a_actions_contacted_officials_binary, Predicted_value = restrain > 0.5)
-# confmatrix_test <- table(Actual_value=test$sr_12a_actions_contacted_officials_binary, Predicted_value = restest > 0.5)
-# confmatrix_train
-# confmatrix_test
-# 
-# (confmatrix_train[[1,1]] + confmatrix_train[[2,2]]) / sum(confmatrix_train)
-# (confmatrix_test[[1,1]] + confmatrix_test[[2,2]]) / sum(confmatrix_test)
-
-
-# Calibration plots
-# run these on the full dataset
-# picture a table with a unique ID for each obs. Predicted probabilities, sorted in ascending order. Split table into deciles. W/in each decile, count the fraction of 1s (yes's). Plot that fraction versus the average probability in that decile.
-# can just build by hand
-
-# GLM net package
-# can be difficult to work with. 
-# ridge and lasso are two flavors of penalized regression
-# could look at throwing the saturated model into GLM net
-
-
-# Variable inflation factors (rule of thumb: under 4 is good)
-vif(logit_contacted_aic)
-
-```
 
 ### Graphing logistic regression
 ```{r}
+
 m1_log_preds = tidy(logit_contacted_aic, conf.int = T) %>%
-    mutate(Model = "Past action")
+    mutate(Model = "Past contact")
 m1_log_predstest <- subset(m1_log_preds, term !="(Intercept)" & p.value < 0.05)  # remove intercept
-#m1_predstest <- m1_predstest %>% 
-#  mutate(term2 = c("Group efficacy", "Personal efficacy", "Descriptive norms: CC advocates", "Place attachment", "CC concern"))
+m1_log_predstest <- m1_log_predstest %>%
+ mutate(term = c("Descriptive contact norms", "Injunctive contact norms", "CIM benefits", "Behavioral attitude: cool, exciting, easy", "Efficacy: able to call", "Agreement: humans have right to modify world" ))
 
 # Specify the width of your confidence intervals
 interval1 <- -qnorm((1-0.9)/2)  # 90% multiplier
 interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
 
 # Plot
-pdf("ThesisPastaction_plot_p_05.pdf") # starts writing a PDF to file
-png("ThesisPastaction_plot_p_05.png") # starts writing a PDF to file
+#pdf("ThesisPastaction_plot_p_05.pdf") # starts writing a PDF to file
+#png("ThesisPastaction_plot_p_05.png") # starts writing a PDF to file
 zp1 <- ggplot(m1_log_predstest, aes(colour = Model))
 zp1 <- zp1 + geom_hline(yintercept = 0, colour = gray(1/2), lty = 2)
 zp1 <- zp1 + geom_linerange(aes(x = term, ymin = conf.low,
@@ -571,7 +265,7 @@ zp1 <- zp1 + geom_pointrange(aes(x = term, y = estimate, ymin = conf.low,
                              lwd = 1/2, position = position_dodge(width = 1/2),
                              shape = 21, fill = "WHITE")
 zp1 <- zp1 + coord_flip() + theme_bw()
-INTzp1_log <- zp1 + ggtitle("What influences past climate action?") + ylab("Odds Ratio") + xlab("Variable")
+INTzp1_log <- zp1 + ggtitle("What influences past representative contact?") + ylab("Odds Ratio") + xlab("Variable")
 print(INTzp1_log)  # The trick to these is position_dodge().
 dev.off()
 
@@ -583,23 +277,23 @@ write.csv(m1_log_predstest,"/Users/natebender/Desktop/ThesisPastactionregmodel.c
 print(INTzp1_log) # prints plot to screen after it's been saved to file
 ```
 
+```{r}
+summary(logit_contacted_aic)
+```
+
+
 ### Logistic regression - cluster analysis
 ```{r, eval=T, echo=F, include=T}
 evs_forclustering <- regression_clean %>% 
-  select(sr_41c_ingenuity, sr_11_harm_future_generations_reversed, efficacy_competresp_all_comp, desccontactnorms_all_comp,
-         cimperceivedrisk_comp, cimbenefits_comp, behatt_usefulpleasantsensible_comp, age_true)
+  select(desccontactnorms_all_comp, injunctcontactnorms_all_comp, cimbenefits_comp, behatt_coolexcitingeasy_comp, sr_31_able_to_call, sr_41a_right_to_modify)
 
 res <- cor(evs_forclustering, use = "complete.obs")
 round(res, 2)
-
-res
-
-
-
+# .77 corr b/w injunctive and descriptive - too much?
 ```
 
 ```{r}
-kmean_2 <- kmeans(na.omit(evs_forclustering), 2)  # test two groups
+kmean_2 <- kmeans(evs_forclustering, 2)  # test two groups
 kmean_2$centers
 kmean_2
 
@@ -608,7 +302,7 @@ autoplot(kmean_2, na.omit(evs_forclustering), frame = TRUE)
 
 
 ```{r, eval=T, echo=F, include=T}
-kmean_3 <- kmeans(na.omit(evs_forclustering), 3)  # test three groups
+kmean_3 <- kmeans(evs_forclustering, 3)  # test three groups
 kmean_3$centers
 kmean_3
 
@@ -616,562 +310,174 @@ autoplot(kmean_3, na.omit(evs_forclustering), frame = TRUE)
 ```
 
 ```{r, eval=T, echo=F, include=T}
-kmean_4 <- kmeans(na.omit(evs_forclustering), 4)  # test three groups
+kmean_4 <- kmeans(evs_forclustering, 4)  # test three groups
 kmean_4$centers
 kmean_4
 
 autoplot(kmean_4, na.omit(evs_forclustering), frame = TRUE)
 ```
 ```{r, eval=T, echo=F, include=T}
-kmean_6 <- kmeans(na.omit(evs_forclustering), 6)  # test three groups
-kmean_6$centers
-kmean_6
+kmean_5 <- kmeans(evs_forclustering, 5)  # test three groups
+kmean_5$centers
+kmean_5
 
-autoplot(kmean_6, na.omit(evs_forclustering), frame = TRUE)
+autoplot(kmean_5, evs_forclustering, frame = TRUE)
 ```
 
 
+### IGNORE FOR THESIS - USING CARET PACKAGE FOR MODELING
+```{r, eval=T, echo=F, include=T}
+# 35 variables including RV
+# 
+# ctrl <- trainControl(method = "cv", number = 5)  # five cross-validations
+# 
+# # saturated logistic regression
+# logit_contacted_saturated <- caret::train(
+#   sr_12a_actions_contacted_officials_binary ~ .,
+#   data = default_train,
+#   method = "glm",
+#   family = "binomial",
+#   trControl = ctrl
+#   )
+# 
+# # Logistic regression via backwards stepwise AIC selection
+# logit_contacted_test <- caret::train(
+#   sr_12a_actions_contacted_officials_binary ~ .,
+#   data = default_train,
+#   method = "glmStepAIC",
+#   direction = "backward",
+#   family = "binomial",
+#   trControl = ctrl
+#   )
+# 
+# # Multinomial logistic regression via glmnet package
+# # Extension of glm models with built-in variable selection. Uses both lasso and ridge penalization.
+# mnl <- caret::train(
+#   sr_12a_actions_contacted_officials_binary ~ .,
+#   data = default_train, 
+#   method = "glmnet",
+#   trControl = ctrl
+#   )
+# 
+# 
+# # Random forest model 
+# # random forests are an ensemble learning method for classification and regression that operate by constructing a lot of decision trees at training time and outputting the class that is the mode of the classes output by individual trees.
+# rf <- caret::train(
+#   sr_12a_actions_contacted_officials_binary ~ .,
+#   data = default_train,
+#   method = "rf",
+#   trControl = ctrl
+# )
+# 
+# 
+# # # XGBoost
+# # # xgboost only deals with numeric data — how best to manipulate data? Force all factors to numeric?
+# # library(mlr)
+# # library(xgboost)
+# # 
+# # traintask <- makeClassifTask(data = default_train, target = "sr_12a_actions_contacted_officials_binary", positive = 1)
+# # testtask <- makeClassifTask(data = default_test, target = "sr_12a_actions_contacted_officials_binary")
+# # 
+# # xgb_learner <- makeLearner(
+# #   "classif.xgboost",
+# #   predict.type = "response",
+# #   par.vals = list(
+# #     objective = "binary:logistic",
+# #     eval_metric = "error",
+# #     nrounds = 200
+# #   )
+# # )
+# # 
+# # xgb_model <- train(xgb_learner, task = traintask)
+# 
 
 
-
-### linear regression with future contact intentions
-```{r, eval=T, echo=F, include=F}
-
-lm_contacting <- glm(sr_13a_takeactions_contact_officials ~ 
-                        age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
-                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
-                        sr_71_employment_status + sr_72_income + 
-                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
-                        descdynamicnorms_comp + desccontactnorms_all_comp +
-                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
-                        injunctmotivation_all_comp + cimbenefits_comp + 
-                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
-                        sr_11_harm_future_generations_reversed +
-                        sr_21a_effective_actions_contacting_officials +
-                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
-                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
-                        behatt_coolexcitingeasy_comp + 
-                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
-                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
-                        sr_41e_govt_do_more + sr_41f_equity, data = train)
-
-lm_contacting_aic <- stepAIC(lm_contacting, direction="backward")
 ```
 
 ```{r}
-summary(lm_contacting_aic)
-```
-
-```{r}
-# Need to research validation testing for linear regression. Lift curve via ROCR only works with logistic. 
-```
-
-
-```{r, eval=T, echo=F, include=T}
-# model significance
-## liklihood ratio tests
-lrtest(lm_contacting_aic, lm_contacting) #not sig different than saturated model, which is good. All else equal -- go with simpler model
-lrtest(lm_contacting_aic) #sig diff from null model, which is good
-
-# model diagnostics
-par(mfrow=c(2,2)) #this command creates a plot grid with 2 rows and 2 columns to view the diagnostic plots all at once
-plot(lm_contacting_aic)
-# Residuals vs fitted: Checks linear relationship. Want a horizontal line w/ no distinct patterns. VIOLATED.
-# Q-Q plot: Checks if residuals are normally distributed. VIOLATED. 
-# Scale-Location: Checks homogeneity of variance. Want a horizontal line w/ no distinct patterns. VIOLATED. 
-# Residuals vs leverage: Checks influential cases via Cook's D. It plots Cook's D as a dotted line (if you can't see a dotted line that's great!). Any points outside of the Cook's D dotted line might be high leverage points. THIS IS GOOD. 
-
-dev.off() #this turns the plot grid off
-
-# Linear relationship is violated. 
-# normality is violated
-# heteroscedastic
-# no influential points though
-
-
-# Add observations indices and
-# drop some columns (.se.fit, .sigma) for simplification
-model.diag.metrics <- augment(lm_contacting_aic)
-
-model.diag.metrics <- model.diag.metrics %>%
-  mutate(index = 1:nrow(model.diag.metrics)) %>%
-  select(index, everything(), -.sigma)
-# Inspect the data
-head(model.diag.metrics, 4)
-
-# check specific points according to Cook's D 
-model.diag.metrics %>%
-  top_n(3, wt = .cooksd)
-
-plot(lm_contacting_aic, 4)
-
-
-## normality
-sf.test(lm_contacting_aic$resid) #non significant p-value means normality assumption is not violated. 
-
-## model gof
-#Hosmer-Lemeshow GOF test --> sensitive to group number, not good for binary predictors
-#https://stats.stackexchange.com/questions/186219/how-many-groups-to-use-in-hosmer-and-lemeshow-test
-for (i in 4:15) {
-  print(hoslem.test(regression_clean$sr_13a_takeactions_contact_officials, fitted(lm_contacting_aic), g=i) $p.value)
-} #no sig values --> shows no evidence of poor model fit
-```
-
-### Graph the Intentions regression
-
-```{r}
-m1_preds = tidy(lm_contacting_aic, conf.int = T) %>%
-    mutate(Model = "Future intentions")
-m1_predstest <- subset(m1_preds, term !="(Intercept)" & p.value < 0.05)  # remove intercept
-#m1_predstest <- m1_predstest %>% 
-#  mutate(term2 = c("Group efficacy", "Personal efficacy", "Descriptive norms: CC advocates", "Place attachment", "CC concern"))
-
-# Specify the width of your confidence intervals
-interval1 <- -qnorm((1-0.9)/2)  # 90% multiplier
-interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
-
-# Plot
-pdf("Thesisfutureintentions_plot_p_05.pdf") # starts writing a PDF to file
-png("Thesisfutureintentions_plot_p_05.png") # starts writing a PDF to file
-zp1 <- ggplot(m1_predstest, aes(colour = Model))
-zp1 <- zp1 + geom_hline(yintercept = 0, colour = gray(1/2), lty = 2)
-zp1 <- zp1 + geom_linerange(aes(x = term, ymin = conf.low,
-                                ymax = conf.high),
-                            lwd = 1, position = position_dodge(width = 1/2))
-zp1 <- zp1 + geom_pointrange(aes(x = term, y = estimate, ymin = conf.low,
-                                 ymax = conf.high),
-                             lwd = 1/2, position = position_dodge(width = 1/2),
-                             shape = 21, fill = "WHITE")
-zp1 <- zp1 + coord_flip() + theme_bw()
-INTzp1 <- zp1 + ggtitle("What influences future climate action intentions?") + ylab("Association") + xlab("Variable")
-print(INTzp1)  # The trick to these is position_dodge().
-dev.off()
-
-write.csv(m1_predstest,"/Users/natebender/Desktop/ThesisIntentionsregmodels.csv", row.names = TRUE)
-
-
-print(INTzp1) # prints plot to screen after it's been saved to file
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### Ordinal logistic regression. model selection using AIC w/ backwards selection
-```{r, eval=T, echo=F, include=F}
-# Build initial ordinal logistic regression model with all potential variables included
-OLR_saturated <- polr(sr_12a_actions_contacted_officials ~ 
-                        age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
-                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
-                        sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
-                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
-                        descdynamicnorms_comp + desccontactnorms_all_comp +
-                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
-                        injunctmotivation_all_comp + cimbenefits_comp + 
-                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
-                        sr_11_harm_future_generations_reversed +
-                        sr_21a_effective_actions_contacting_officials +
-                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
-                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
-                        behatt_coolexcitingeasy_comp + 
-                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
-                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
-                        sr_41e_govt_do_more + sr_41f_equity,data = OLR_complete_cases, Hess = T)
-
-OLR_aic <- stepAIC(OLR_saturated, direction="backward")
-```
-
-$$\\[.05in]$$
-#### Break out final model for readability
-```{r, eval=T, echo=F, include=T}
-summary(OLR_aic)
-
-olr_aic2 <- polr(sr_12a_actions_contacted_officials ~ 
-    age_true +
-      #desccontactnorms_all_comp +
-      descrolemodelnorms_all_comp + 
-        injunctcontactnorms_all_comp +
-      cimbenefits_comp +
-      cimperceivedrisk_comp +
-        sr_10_harm_you_personally_reversed +
-      sr_11_harm_future_generations_reversed + 
-      sr_41c_ingenuity,
-    data = OLR_complete_cases,
-    Hess = T)
-
-brant(olr_aic2)
-```
-
-$$\\[.05in]$$
-#### Interpreting final model coefficients and intercepts
-```{r, eval=F, echo=F, include=T}
-# get the p-values from the final model and store the coefficient table
-ctable <- round(coef(summary(OLR_aic)), 4)
-# calculate and store p-values
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = F) * 2
-# combine coefficient table and p-values table
-(ctable <- cbind(ctable, "p value" = round(p, 4)))
-```
-
-#### Interpreting proportional odds ratios and CIs
-```{r, eval=T, echo=F, include=T}
-# # Add CIs for variables and for interpreting the proportional odds ratios. 
-# (ci <- confint(fit1_OLR)) # default method gives profiled CIs
-# confint.default(fit1_OLR) # CIs assuming normality
-# exp(coef(fit1_OLR))
-# exp(cbind(OR = coef(fit1_OLR), ci))
-
-# get confidence intervals
-# profiled CIs
-ci <- round(confint(OLR_aic), 4)
-# log odd coefficients
-or <- round(coef(OLR_aic), 4)
-# convert coefficients into odds ratio, combine with CIs
-round(exp(cbind(OR = or, ci)), 4)
-
-# Visualizing the variable coefficients
-install.packages("jtools")
-install.packages("ggstance")
-library(ggstance)
-library(jtools)
-jtools::plot_summs(OLR_aic, scale = TRUE, plot.distributions = TRUE, inner_ci_level = .9)
-```
-*Non-significant predictors:*
-Age
-Descriptive norms related to role models
-Belief on whether CC will harm you personally (sr_10 harm you personally)
-
-*Significant predictors, coefficients, and proportional odds ratios, in descending order of leverage:*
-Descriptive Contact Norms: 0.77
-For a one unit increase in the composite variable of descriptive contact norms, the odds of moving from "no contact" to "one contact" or "more than one contact" (in the last twelve months) are 2.17 times greater, given that the other variables in the model are held constant.
-
-CIM Benefits (interpersonal discussion / hearing about CC): 0.58
-For a one unit increase in composite variable of CIM Benefits, the odds of moving from "no contact" to "one contact" or "more than one contact" (in the last twelve months) are 1.78 times greater, given that the other variables in the model are held constant.
-
-Perceived Risk: 0.54
-For a one unit increase in composite variable of CIM Benefits, the odds of moving from "no contact" to "one contact" or "more than one contact" (in the last twelve months) are 1.72 times greater, given that the other variables in the model are held constant.
-
-sr_11 How much will CC harm future generations?: -0.49
-For a one unit increase in composite variable of CIM Benefits, the odds of moving from "no contact" to "one contact" or "more than one contact" (in the last twelve months) are 0.61 times greater, given that the other variables in the model are held constant.
-
-Injunctive Contact Norms: 0.47
-For a one unit increase in composite variable of CIM Benefits, the odds of moving from "no contact" to "one contact" or "more than one contact" (in the last twelve months) are 1.60 times greater, given that the other variables in the model are held constant.
-
-sr_41 Human ingenuity will ensure we do not make the Earth unlivable: -0.35
-For a one unit increase in composite variable of CIM Benefits, the odds of moving from "no contact" to "one contact" or "more than one contact" (in the last twelve months) are 0.70 times greater, given that the other variables in the model are held constant.
-
-*Discussion*
-Descriptive Contact Norms, CIM Benefits, Perceived Risk, Injunctive Contact Norms all have a positive effect on propensity to contact officials. The more a person perceives positive descriptive norms related to contacting officials; perceives positive injunctive norms related to contacting officials; hears about CC from friends, media, & public figures; or perceives CC as a risk, the more likely they are to contact officials. It's interesting that hearing about CC more often (through interpersonal discussion, mass media, or from public figures) is predictive of contacting officials along with the other more intuitive factors. 
-
-Conversely, the more a person believes CC will harm future generations or the more they agree with the statement that "human ingenuity will ensure we do not make the Earth unlivable", the less likely they are to contact officials. The first could be explained by the person believing that CC is more an issue for the distant future; if CC will only harm future generations, why bother contacting officials now? Additionally, the ecological worldview that human ingenuity will solve CC may align with a person thinking CC is more a technological problem than a social one, and this worldview may align with the person perceiving less risk from CC since they see CC as a problem that will inevitably be solved by human innovation. 
-
-$$\\[.05in]$$
-#### Multi-collinearity
-```{r, eval=T, echo=F, include=T}
-# social norms factors
-ggpairs(OLR_complete_cases[, c(2:6)], title = "Correlation Plot between social norms variables")
-
-# cimbenefits, perceivedrisk, personal harm, future generations harm, efficacy - contacting officials, efficacy - effectiveness orgs, efficacy - competency/responsiveness orgs
-ggpairs(OLR_complete_cases[, c(7:13)], title = "1/3 vars Correlation Plot")
-
-#  behavioral attitudes, easy/able to call
-ggpairs(OLR_complete_cases[, c(14:19)], title = "2/3 vars Correlation Plot")
-
-# worldviews
-ggpairs(OLR_complete_cases[, c(20:25)], title = "3/3 vars Correlation Plot")
-
-# Variable inflation factor test. Need to double-check that the "No intercept: vifs may not be sensible" warning msg isn't throwing things off. 
-# Below 2 should be the cutoff for showing no evidence of collinearity. This is violated. 
-car::vif(OLR_aic)
-```
-
-
-#### Parallel regression assumption via Brant's test 
-```{r, eval=T, echo=F, include=T}
-library(brant)
-# Testing parallel regression assumption
-# If the relationship between all pairs of groups is the same, then there is only one set of coefficients, which means that there is only one model. If this assumption is violated, different models are needed to describe the relationship between each pair of outcome groups.
-# A p-value of less than 0.05 on this test, particularly on the Omnibus plus at least one of the variables, should be interpreted as a failure of the proportional odds assumption.
-brant(OLR_aic)
-
-# If the proportional odds assumption is not met, one can use a multinomial logistic regression model, an adjacent-categories logistic model, or a partial proportional odds model.
-
-
-# Second approach to test the parallel lines assumption visually. 
-# Code from the web. Needs tweaking. 
-
-# # Predict the probability (p) of diabete positivity
-# probabilities <- predict(fit1_OLR, type = "response")
-# predicted.classes <- ifelse(probabilities > 0.5, "pos", "neg")
-# head(predicted.classes)
-# 
-# mydata <- PimaIndiansDiabetes2 %>%
-#   dplyr::select_if(is.numeric) 
-# predictors <- colnames(mydata)
-# 
-# # Bind the logit and tidying the data for plot
-# mydata <- mydata %>%
-#   mutate(logit = log(probabilities/(1-probabilities))) %>%
-#   gather(key = "predictors", value = "predictor.value", -logit)
-# Create the scatter plots:
-# ggplot(mydata, aes(logit, predictor.value))+
-#   geom_point(size = 0.5, alpha = 0.5) +
-#   geom_smooth(method = "loess") + 
-#   theme_bw() + 
-#   facet_wrap(~predictors, scales = "free_y") 
-```
-The Omnibus shows a probability of 0, along with desccontactnorms_all_comp (p=.02), failing the Brant test / proportional odds assumption. This means that something other than the ordinal linear regression approach must be used. 
-
-#### Model goodness-of-fit (Lipsitz & McFadden's pseudo-R^2)
-```{r, eval=F, echo=F, include=T}
-# The Lipsitz test is a goodness of fit test for ordinal response logistic regression models.
-# Since the null hypothesis is a good model fit, low p-values indicate potential problems with the model.
-generalhoslem::lipsitz.test(OLR_aic)
-
-# values of .2 to .4 for the McF's pseudo-R^2 represent an excellent fit.
-PseudoR2(OLR_aic)
-
-# Need to work on the vector of categorical variables somehow
-# cats <- c("race_white_dumvar", "gender_dumvar", "children_dumvar", "sr_75_religion_dumvar", "sr_56_marital_status", "sr_61_education", "sr_71_employment_status", "sr_72_income","sr_78_political_affiliation","sr_79_political_leaning","sr_7_believe_about_climate_change")
-
-# generalhoslem::pulkrob.chisq(fit1_OLR, catvars = c("race_white_dumvar", "gender_dumvar", "children_dumvar", "sr_75_religion_dumvar", "sr_56_marital_status", "sr_61_education", "sr_71_employment_status", "sr_72_income","sr_78_political_affiliation","sr_79_political_leaning","sr_7_believe_about_climate_change"))
-```
-Lipsitz test of p=.03; low p-value indicate likely problems with the model. However a McFadden's pseudo R^2 indicates great model fit? Don't know how to interpret that wrinkle in light of the model failing the Lipsitz test and the Brant test. 
-
-
-#### Influential factors / outliers via Cook's Distance
-```{r, eval=F, echo=F, include=T}
-# Cook's Distance test that I haven't figured out yet for OLR. 
-# plot(fit1_OLR, which = 4, id.n = 3)
-# 
-# model.data <- augment(fit1_OLR) %>% 
-#   mutate(index = 1:n())
-# 
-# model.data %>% top_n(3, .cooksd)
-```
-
-
-### Multinommial Logistic Regression
-```{r, eval=T, echo=F, include=F}
-
-# Variables that went into the OLR model
-multinom_saturated <- multinom(data=OLR_complete_cases, sr_12a_actions_contacted_officials ~ 
-                        age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
-                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
-                        sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
-                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
-                        descdynamicnorms_comp + desccontactnorms_all_comp +
-                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
-                        injunctmotivation_all_comp + cimbenefits_comp + 
-                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
-                        sr_11_harm_future_generations_reversed +
-                        sr_21a_effective_actions_contacting_officials +
-                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
-                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
-                        behatt_coolexcitingeasy_comp + 
-                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
-                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
-                        sr_41e_govt_do_more + sr_41f_equity)
-
-
-multinom_aic <- stepAIC(multinom_saturated, direction="backward")
-
-# From UCLA: diagnostics and model fit: 
-# Unlike logistic regression where there are many statistics for performing model diagnostics, it is not as straightforward to do diagnostics with multinomial logistic regression models. For the purpose of detecting outliers or influential data points, one can run separate logit models and use the diagnostics tools on each model.
-```
-
-```{r, eval=T, echo=F, include=T}
-summary(multinom_aic)
-```
-
-
-### General Linear Model Regression (continuous RV)
-```{r, eval=T, echo=F, include=F}
-# Try the GLM approach as well. 
-glm_saturated <- glm(data=OLR_complete_cases, as.numeric(sr_12a_actions_contacted_officials) ~ 
-                        age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
-                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
-                        sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
-                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
-                        descdynamicnorms_comp + desccontactnorms_all_comp +
-                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
-                        injunctmotivation_all_comp + cimbenefits_comp + 
-                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
-                        sr_11_harm_future_generations_reversed +
-                        sr_21a_effective_actions_contacting_officials +
-                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
-                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
-                        behatt_coolexcitingeasy_comp + 
-                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
-                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
-                        sr_41e_govt_do_more + sr_41f_equity)
-
-glm_model_aic <- stepAIC(glm_saturated, direction="backward")
-
-
-lrtest(glm_model_aic) #sig diff from null model, which is good
-
-par(mfrow=c(2,2))  #this command creates a plot grid with 2 rows and 2 columns to view the diagnostic plots all at once
-plot(glm_model_aic)  #residuals vs fitted looks great, q-q plot is windy but normality is less important, 
-#the residuals vs leverage is the one that shows you Cook's D. It plots Cook's D as a dotted line (if you can't see a dotted line that's great!)
-#any points outside of the Cook's D dotted line might be high leverage points.
-
-## normality via Shapiro_Francia test
-# If the value of p is equal to or less than 0.05, then the hypothesis of normality will be rejected by the Shapiro test.
-sf.test(glm_model_aic$resid) #significantly different from normal... ugh that sucks, but normality assumption can be okay to break
-
-#Hosmer-Lemeshow GOF test --> sensitive to group number, not good for binary predictors
-#https://stats.stackexchange.com/questions/186219/how-many-groups-to-use-in-hosmer-and-lemeshow-test
-# create numeric RV for HL GOF test
-OLR_complete_cases <- OLR_complete_cases %>%
-  mutate(sr_12a_actions_contacted_officials_numeric = as.numeric(OLR_complete_cases$sr_12a_actions_contacted_officials))
-
-# The for loop runs the test for group sizes 4 to 15
-for (i in 4:15) {
-  print(hoslem.test(OLR_complete_cases$sr_12a_actions_contacted_officials_numeric, fitted(glm_model_aic), g=i) $p.value)
-} #no sig values for any of the group sizes --> indicate that there is no evidence of poor model fit
-
-```
-
-```{r, eval=T, echo=F, include=T}
-# Compare models
-summary(glm_model_aic)
-summary(multinom_aic)
-summary(OLR_aic)
-```
-
-### Penalized Logistic Regression via cyclic coordinate descent
-```{r, eval=T, echo=F, include=T}
-
-#[ https://www.rdocumentation.org/packages/CDLasso/versions/1.1/topics/logit.reg ] 
-# use example: https://rpubs.com/Lajobu/o_choice_logit
-# logit.reg performs an algorithm for estimating regression coefficients in a penalized logistic regression model. The algorithm is based on cyclic coordinate descent.
-
-ologit_saturated = logit.reg(sr_12a_actions_contacted_officials ~ age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
-                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
-                        sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
-                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
-                        descdynamicnorms_comp + desccontactnorms_all_comp +
-                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
-                        injunctmotivation_all_comp + cimbenefits_comp + 
-                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
-                        sr_11_harm_future_generations_reversed +
-                        sr_21a_effective_actions_contacting_officials +
-                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
-                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
-                        behatt_coolexcitingeasy_comp + 
-                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
-                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
-                        sr_41e_govt_do_more + sr_41f_equity, data=OLR_complete_cases)
-
-# AIC doesn't appear to work with the oglmx model approach. Need to investigate. 
-# ologit_model_aic <- stepAIC(ologit_saturated, direction="backward")
-
-summary(ologit_saturated)
-
-# Margins call not working yet. Need to investigate. 
-# options(scipen=999)
-# margins.oglmx(ologit_saturated)
-
-```
-
-### Generalized Ordered Logistic Regression
-```{r, eval=T, echo=F, include=T}
-# Ordered models such as ordered probit and ordered logit presume that the error variance is constant across observations. In the case that this assumption does not hold estimates of marginal effects are typically biased (Weiss (1997)). The oglmx package allows for generalization of ordered probit and ordered logit models by allowing the user to specify a model for the variance. Furthermore, the package includes functions to calculate the marginal effects.
-
-# Usage example/questions: https://stackoverflow.com/questions/61328112/interpretation-of-oglmx-output-heteroscedastic-ordered-probit-regression
-# Paper on oglmx package / approach: https://mran.microsoft.com/snapshot/2016-10-12/web/packages/oglmx/vignettes/oglmxVignette.pdf
-
-ologit_oglmx_saturated <- oglmx(sr_12a_actions_contacted_officials ~ age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
-                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
-                        sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
-                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
-                        descdynamicnorms_comp + desccontactnorms_all_comp +
-                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
-                        injunctmotivation_all_comp + cimbenefits_comp + 
-                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
-                        sr_11_harm_future_generations_reversed +
-                        sr_21a_effective_actions_contacting_officials +
-                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
-                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
-                        behatt_coolexcitingeasy_comp + 
-                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
-                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
-                        sr_41e_govt_do_more + sr_41f_equity, data=OLR_complete_cases)
-
-# ologit_model_aic <- stepAIC(ologit_saturated, direction="backward")
-
-
-
-summary(ologit_oglmx_saturated)
-```
-
-### Second approach for doing Generalized Ordered Logistic Regression? using clm() func in ordinal pkg
-```{r, eval=T, echo=F, include=F}
-# Ordered models such as ordered probit and ordered logit presume that the error variance is constant across observations. In the case that this assumption does not hold estimates of marginal effects are typically biased (Weiss (1997)). The oglmx package allows for generalization of ordered probit and ordered logit models by allowing the user to specify a model for the variance. Furthermore, the package includes functions to calculate the marginal effects.
-
-install.packages("ordinal")
-library(ordinal)
-
-# Conceptual discussion of difference b/w OLR and generalized ordered logistic reg: https://www.theanalysisfactor.com/generalized-ordinal-logistic-regression/
-# Paper on ordinal package / Cumulative link models approach: https://cran.r-project.org/web/packages/ordinal/vignettes/clm_article.pdf
-
-clm_saturated = clm(sr_12a_actions_contacted_officials ~ age_true + race_white_dumvar + gender_dumvar + children_dumvar + 
-                        sr_75_religion_dumvar + sr_56_marital_status + sr_61_education + 
-                        sr_71_employment_status + sr_72_income + sr_78_political_affiliation + 
-                        sr_79_political_leaning + sr_7_believe_about_climate_change + 
-                        descdynamicnorms_comp + desccontactnorms_all_comp +
-                        descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
-                        injunctmotivation_all_comp + cimbenefits_comp + 
-                        cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
-                        sr_11_harm_future_generations_reversed +
-                        sr_21a_effective_actions_contacting_officials +
-                        efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
-                        behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
-                        behatt_coolexcitingeasy_comp + 
-                        sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify + 
-                        sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent + 
-                        sr_41e_govt_do_more + sr_41f_equity, data=OLR_complete_cases)
-
-clm_saturated_aic <- stepAIC(clm_saturated, direction="backward")
-
-
-
-summary(clm_saturated_aic)
-```
-
-```{r, eval=T, echo=F, include=T}
-anova(clm_saturated_aic, type="III")
-
-# can also do Likelihood ratio tests of cumulative link models:
+# summary(logit_contacted_test)
 ```
 
 
 ```{r}
+# prepared_input <- prepare_scores_and_ntiles(datasets=list("default_train","default_test"),
+#   dataset_labels = list("train data","test data"),
+#   models = list("logit_contacted_test", "mnl", "rf"),
+#   model_labels = list("LogitStepAIC", "Glmnet", "Randomforest"),
+#   target_column= "sr_12a_actions_contacted_officials_binary")
+# 
+# forplot <- plotting_scope(
+#   prepared_input,
+#   scope = "compare_models",
+#   select_dataset_label = "test data", 
+#   select_targetclass = NA)
+# 
+# forplotindividual <- plotting_scope(
+#   prepared_input,
+#   select_model_label = "LogitStepAIC", 
+#   select_dataset_label = "test data", 
+#   select_targetclass = NA)
+# 
+# # all four plots together
+# plot_multiplot(
+#   data = forplotindividual
+# )
+# 
+# # just cumulative lift 
+# plot_cumlift(
+#   data = forplotindividual,
+#   highlight_ntile = 2,
+# )
+# 
+# # just cumulative response
+# plot_cumresponse(
+#   data = forplot,
+#   highlight_ntile = 2
+# )
 
 ```
+
+
+```{r}
+# # random forest interpretation
+# plot(rf)
+# 
+# rf_predictions <- predict(rf, default_test)
+# 
+# # "accuracy" is accuracy on training data. 
+# confusionMatrix(table(default_test[,"sr_12a_actions_contacted_officials_binary"],rf_predictions))
+# 
+# varImp(rf)
+# # somehow limit to just the significant variables?
+# plot(varImp(rf))
+
+```
+
+
+```{r}
+# LogitAIC PREDICTED V ACTUAL TESTING
+# test_predicted <- predict(logit_contacted_test, default_test)
+# expected <- default_test$sr_12a_actions_contacted_officials_binary
+# 
+# table(expected)
+# table(test_predicted)
+# 
+# confusionMatrix(test_predicted, expected)
+
+```
+
+```{r}
+# Variable importance
+
+# is there a way to get this to show only the significant variables in the final model?
+# ggplot(varImp(logit_contacted_test))
+```
+
+
+```{r, eval=T, echo=F, include=T}
+# Variable inflation factors (rule of thumb: under 4 is good)
+# vif(logit_contacted_test$finalModel)
+
+```
+
 
