@@ -289,40 +289,96 @@ evs_forclustering <- regression_clean %>%
 
 res <- cor(evs_forclustering, use = "complete.obs")
 round(res, 2)
-# .77 corr b/w injunctive and descriptive - too much?
+# .77 corr b/w injunctive and descriptive norms - too much?
 ```
 
 ```{r}
 kmean_2 <- kmeans(evs_forclustering, 2)  # test two groups
 kmean_2$centers
-kmean_2
 
 autoplot(kmean_2, na.omit(evs_forclustering), frame = TRUE)
 ```
+```{r}
+kmean_2
+```
+
 
 
 ```{r, eval=T, echo=F, include=T}
+# 3 cluster solution
 kmean_3 <- kmeans(evs_forclustering, 3)  # test three groups
 kmean_3$centers
 kmean_3
 
 autoplot(kmean_3, na.omit(evs_forclustering), frame = TRUE)
-```
 
-```{r, eval=T, echo=F, include=T}
+# 4 clusters
 kmean_4 <- kmeans(evs_forclustering, 4)  # test three groups
 kmean_4$centers
 kmean_4
 
 autoplot(kmean_4, na.omit(evs_forclustering), frame = TRUE)
-```
-```{r, eval=T, echo=F, include=T}
+
+# 5 clusters
 kmean_5 <- kmeans(evs_forclustering, 5)  # test three groups
 kmean_5$centers
 kmean_5
 
 autoplot(kmean_5, evs_forclustering, frame = TRUE)
 ```
+```{r}
+install.packages("factoextra")
+library(factoextra)
+
+# elbow method suggests 3 clusters.
+# Best balance between minimizing WSS while keeping total clusters to a reasonable number. 
+# The location of a bend (knee) in the plot is generally considered as an indicator of the appropriate number of clusters.
+fviz_nbclust(evs_forclustering, kmeans, method = "wss") +
+geom_vline(xintercept = 3, linetype = 2)
+```
+
+
+```{r}
+# Average silhouette method
+# the average silhouette approach measures the quality of a clustering. That is, it determines how well each object lies within its cluster. A high average silhouette width indicates a good clustering.
+
+# This method recommends two clusters
+fviz_nbclust(evs_forclustering, kmeans, method = "silhouette")
+```
+```{r}
+# Gap statistic
+# The gap statistic compares the total intracluster variation for different values of k with their expected values under null reference distribution of the data (i.e. a distribution with no obvious clustering)
+
+# nstart option attempts multiple initial configurations and reports on the best one. For example, adding nstart=25 will generate 25 initial random centroids and choose the best one for the algorithm.
+# kmax sets upper limit of clusters to test against
+# B is the number of bootstrapped samples the function uses to test against. The reference dataset is generated using Monte Carlo simulations of the sampling process
+library(cluster)
+gap_stat <- clusGap(evs_forclustering, FUN = kmeans, nstart = 1,
+                    K.max = 10, B = 20)
+# gap stat suggests three clusters
+fviz_gap_stat(gap_stat)
+
+```
+
+
+
+```{r}
+# Add clusters back in for both 2-cluster and 3-cluster solutions. Do some descriptive stats and see which approach is more useful. 
+
+
+
+# Now that the two dataframes are same length, add cluster numbers to orig dataframe
+nike_sub_complete$cluster3 <- kmean_3$cluster
+
+# alt approach using cbind
+regression_clean_clust3 <- cbind(regression_clean, cluster = kmean_3$cluster)
+
+
+# Rename clusters from numbers to names
+```
+
+
+
 
 
 ### IGNORE FOR THESIS - USING CARET PACKAGE FOR MODELING
