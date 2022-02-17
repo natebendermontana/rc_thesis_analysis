@@ -182,7 +182,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r load packages and data, eval=T, echo=F, include=F}
 ### Packages / libraries / load data & filter rejected out 
 
-setwd("/Users/natebender/Desktop/Repo/RCthesisanalysis/")
+setwd("/Users/natebender/Desktop/repo/RCthesisanalysis/")
 # install.packages("ltm")
 # install.packages("fBasics")
 # install.packages("ggcorrplot")
@@ -221,7 +221,7 @@ library(MASS)
 library(Hmisc)
 
 # Load data, create second dataset of only accepted responses
-d <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/dyn_national_20200828 - results-20200930-082116_NEW.csv")
+d <- read.csv("/Users/natebender/Desktop/repo/RCthesisanalysis/dyn_national_20200828 - results-20200930-082116_NEW.csv")
 
 d_accept <- d %>% 
   dplyr::filter(reject == 0)
@@ -1122,14 +1122,14 @@ Collapsing the two liberal levels and two conservative levels into one level api
 
 ## Listwise Deletion
 ```{r, eval=T, echo=F, include=T}
-# Checking extent of missing data w/ listwise deletion
 
 describe(d_accept$sr_13a_takeactions_contact_officials)
 
 OLRdata <- d_accept %>% dplyr::select(
+  matches("respondent_id"),
   matches("sr_12a_actions_contacted_officials"),
   matches("sr_13a_takeactions_contact_officials"),
-  -matches("sr_12a_actions_contacted_officials_factor"),  
+  -matches("sr_12a_actions_contacted_officials_factor"),
   matches("descdynamicnorms_comp"),
   matches("desccontactnorms_all_comp"),
   matches("descrolemodelnorms_all_comp"),
@@ -1158,7 +1158,7 @@ OLRdata <- d_accept %>% dplyr::select(
   matches("children_dumvar"),
   matches("gender_dumvar"),
   matches("age_true"),
-  -matches("age_range"),  
+  -matches("age_range"),
   matches("sr_56_marital_status"),
   matches("sr_61_education"),
   matches("sr_71_employment_status"),
@@ -1185,3 +1185,4 @@ rejected <- d %>%
 write.csv(OLR_complete_cases,"/Users/natebender/Desktop/Repo/RCthesisanalysis/cleandata/perenial_complete_for_analysis.csv", row.names = TRUE)
 
 ```
+

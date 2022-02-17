@@ -1,7 +1,7 @@
 ---
 title: "Thesis Analysis"
 author: "Nate Bender"
-date: "2/11/2022"
+date: "2/16/2022"
 note: "Nationally-representative survey; conducted Aug 3-9, 2020"
 output: html_document
 ---
@@ -163,7 +163,7 @@ data_for_regression <- regression_clean %>%
     matches("sr_41f_equity")
     )
 
-set.seed(1234569)
+set.seed(19881)
 default_idx = createDataPartition(data_for_regression$sr_12a_actions_contacted_officials_binary, p = 0.75, list = FALSE)
 default_train = data_for_regression[default_idx, ]
 default_test = data_for_regression[-default_idx, ]
@@ -246,7 +246,7 @@ m1_log_preds = tidy(logit_contacted_aic, conf.int = T) %>%
     mutate(Model = "Past contact")
 m1_log_predstest <- subset(m1_log_preds, term !="(Intercept)" & p.value < 0.05)  # remove intercept
 m1_log_predstest <- m1_log_predstest %>%
- mutate(term = c("Descriptive contact norms", "Injunctive contact norms", "CIM benefits", "Behavioral attitude: cool, exciting, easy", "Efficacy: able to call", "Agreement: humans have right to modify world" ))
+ mutate(term = c("Descriptive contact norms", "Injunctive contact norms", "CIM benefits", "CC personal harm", "CC harm future generations","Efficacy: able to call"))
 
 # Specify the width of your confidence intervals
 interval1 <- -qnorm((1-0.9)/2)  # 90% multiplier
@@ -282,10 +282,12 @@ summary(logit_contacted_aic)
 ```
 
 
+
+
 ### Logistic regression - cluster analysis
 ```{r, eval=T, echo=F, include=T}
 evs_forclustering <- regression_clean %>% 
-  select(desccontactnorms_all_comp, injunctcontactnorms_all_comp, cimbenefits_comp, behatt_coolexcitingeasy_comp, sr_31_able_to_call, sr_41a_right_to_modify)
+  select(desccontactnorms_all_comp, injunctcontactnorms_all_comp, cimbenefits_comp, sr_10_harm_you_personally_reversed, sr_11_harm_future_generations_reversed, sr_31_able_to_call)
 
 res <- cor(evs_forclustering, use = "complete.obs")
 round(res, 2)
@@ -293,11 +295,14 @@ round(res, 2)
 ```
 
 ```{r}
-kmean_2 <- kmeans(evs_forclustering, 2)  # test two groups
-kmean_2$centers
+# 4 clusters
+kmean_4 <- kmeans(evs_forclustering, 4)  # test three groups
+kmean_4$centers
+kmean_4
+autoplot(kmean_4, na.omit(evs_forclustering), frame = TRUE)
 
-autoplot(kmean_2, na.omit(evs_forclustering), frame = TRUE)
 ```
+
 ```{r}
 kmean_2
 ```
@@ -305,19 +310,21 @@ kmean_2
 
 
 ```{r, eval=T, echo=F, include=T}
+
+kmean_2 <- kmeans(evs_forclustering, 2)  # test two groups
+kmean_2$centers
+
+autoplot(kmean_2, na.omit(evs_forclustering), frame = TRUE)
+
 # 3 cluster solution
 kmean_3 <- kmeans(evs_forclustering, 3)  # test three groups
 kmean_3$centers
 kmean_3
 
-autoplot(kmean_3, na.omit(evs_forclustering), frame = TRUE)
+autoplot(kmean_3, evs_forclustering, frame = TRUE)
 
-# 4 clusters
-kmean_4 <- kmeans(evs_forclustering, 4)  # test three groups
-kmean_4$centers
-kmean_4
 
-autoplot(kmean_4, na.omit(evs_forclustering), frame = TRUE)
+
 
 # 5 clusters
 kmean_5 <- kmeans(evs_forclustering, 5)  # test three groups
@@ -327,7 +334,6 @@ kmean_5
 autoplot(kmean_5, evs_forclustering, frame = TRUE)
 ```
 ```{r}
-install.packages("factoextra")
 library(factoextra)
 
 # elbow method suggests 3 clusters.
@@ -353,28 +359,98 @@ fviz_nbclust(evs_forclustering, kmeans, method = "silhouette")
 # kmax sets upper limit of clusters to test against
 # B is the number of bootstrapped samples the function uses to test against. The reference dataset is generated using Monte Carlo simulations of the sampling process
 library(cluster)
-gap_stat <- clusGap(evs_forclustering, FUN = kmeans, nstart = 1,
-                    K.max = 10, B = 20)
+gap_stat <- clusGap(evs_forclustering, FUN = kmeans, nstart = 10,
+                    K.max = 5, B = 20)
 # gap stat suggests three clusters
 fviz_gap_stat(gap_stat)
 
+```
+```{r}
+install.packages("NbClust")
+library(NbClust)
+nb <- NbClust(evs_forclustering, distance = "euclidean", min.nc = 2,
+        max.nc = 10, method = "kmeans")
+
+fviz_nbclust(nb)
+```
+
+```{r}
+library(GGally)
+library(plotly)
+
+regression_clean$cluster <- as.factor(kmean_4$cluster)
+
+df4_clus_avg <- regression_clean %>%
+  group_by(cluster) %>%
+  summarize_if(is.numeric, mean)
+
+p <- ggparcoord(
+  data = df4_clus_avg, 
+  columns = c(5,7, 9, 11, 12, 21), 
+  groupColumn = "cluster", 
+  scale = "globalminmax", # no variable scaling is done; the range of the graphs is defined by the global minimum and the global maximum
+  order = "skewness") + 
+  labs(x = "Predictive variables", 
+       y = "value", 
+       title = "Clustering") +
+  theme(axis.text.x=element_text(angle=7, hjust=1))
+
+ggplotly(p)
+```
+
+
+```{r}
+norms_benes <- c(5,7, 9)
+harm_efficacy <- c(11, 12, 21)
+
+regression_clean %>% 
+  pivot_longer(cols = norms_benes,
+               names_to = "question", 
+               values_to = "response") %>% 
+  ggplot(aes(x = response, colour = cluster)) +
+  facet_wrap(vars(question), ncol = 1) +
+  geom_point(stat = "count") +
+  geom_line(stat = "count") +
+  labs(x = "Response", y = "Number of respondents")
+
+```
+```{r}
+regression_clean %>% 
+  pivot_longer(cols = harm_efficacy,
+               names_to = "question", 
+               values_to = "response") %>% 
+  ggplot(aes(x = response, colour = cluster)) +
+  facet_wrap(vars(question), ncol = 1) +
+  geom_point(stat = "count") +
+  geom_line(stat = "count") +
+  labs(x = "Response", y = "Number of respondents")
 ```
 
 
 
 ```{r}
-# Add clusters back in for both 2-cluster and 3-cluster solutions. Do some descriptive stats and see which approach is more useful. 
+regression_clean %>%
+  mutate(Cluster = kmean_4$cluster) %>%
+  group_by(Cluster) %>%
+  summarise_all("mean")
+```
+#### Merging targeting variables to clusters
+```{r}
+original_data <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/dyn_national_20200828 - results-20200930-082116_NEW.csv", header=TRUE, stringsAsFactors = TRUE)
+
+targeting_data <- original_data %>% 
+  select(
+    matches("")
+  )
+
+merged_data <- merge(regression_clean2, original_data, by = 'respondent_id', all.x= F)
 
 
 
-# Now that the two dataframes are same length, add cluster numbers to orig dataframe
-nike_sub_complete$cluster3 <- kmean_3$cluster
-
-# alt approach using cbind
-regression_clean_clust3 <- cbind(regression_clean, cluster = kmean_3$cluster)
 
 
-# Rename clusters from numbers to names
+
+
 ```
 
 
