@@ -1,0 +1,197 @@
+---
+title: "Thesis Analysis - ch2 - Clustering"
+author: "Nate Bender"
+date: "2/17/2022"
+note: "Nationally-representative survey; conducted Aug 3-9, 2020"
+output: html_document
+---
+
+```{r setup, include=F}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load packages and data, eval=T, echo=F, include=F}
+### Packages / libraries / load data & filter rejected out 
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(GGally)
+
+```
+
+
+
+```{r, eval=T, echo=F, include=T}
+regression_clean <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/cleandata/perenial_complete_for_analysis.csv", header=TRUE, stringsAsFactors = TRUE)
+```
+
+### Logistic regression - cluster analysis
+```{r, eval=T, echo=F, include=T}
+evs_forclustering <- regression_clean %>% 
+  select(desccontactnorms_all_comp, injunctcontactnorms_all_comp, cimbenefits_comp, sr_10_harm_you_personally_reversed, sr_11_harm_future_generations_reversed, sr_31_able_to_call)
+
+res <- cor(evs_forclustering, use = "complete.obs")
+round(res, 2)
+# .77 corr b/w injunctive and descriptive norms - too much?
+```
+
+```{r}
+# 4 clusters
+kmean_4 <- kmeans(evs_forclustering, 4)  # test three groups
+kmean_4$centers
+kmean_4
+autoplot(kmean_4, na.omit(evs_forclustering), frame = TRUE)
+
+```
+
+```{r}
+kmean_2
+```
+
+
+
+```{r, eval=T, echo=F, include=T}
+
+kmean_2 <- kmeans(evs_forclustering, 2)  # test two groups
+kmean_2$centers
+
+autoplot(kmean_2, na.omit(evs_forclustering), frame = TRUE)
+
+# 3 cluster solution
+kmean_3 <- kmeans(evs_forclustering, 3)  # test three groups
+kmean_3$centers
+kmean_3
+
+autoplot(kmean_3, evs_forclustering, frame = TRUE)
+
+
+
+
+# 5 clusters
+kmean_5 <- kmeans(evs_forclustering, 5)  # test three groups
+kmean_5$centers
+kmean_5
+
+autoplot(kmean_5, evs_forclustering, frame = TRUE)
+```
+```{r}
+library(factoextra)
+
+# elbow method suggests 3 clusters.
+# Best balance between minimizing WSS while keeping total clusters to a reasonable number. 
+# The location of a bend (knee) in the plot is generally considered as an indicator of the appropriate number of clusters.
+fviz_nbclust(evs_forclustering, kmeans, method = "wss") +
+geom_vline(xintercept = 3, linetype = 2)
+```
+
+
+```{r}
+# Average silhouette method
+# the average silhouette approach measures the quality of a clustering. That is, it determines how well each object lies within its cluster. A high average silhouette width indicates a good clustering.
+
+# This method recommends two clusters
+fviz_nbclust(evs_forclustering, kmeans, method = "silhouette")
+```
+```{r}
+# Gap statistic
+# The gap statistic compares the total intracluster variation for different values of k with their expected values under null reference distribution of the data (i.e. a distribution with no obvious clustering)
+
+# nstart option attempts multiple initial configurations and reports on the best one. For example, adding nstart=25 will generate 25 initial random centroids and choose the best one for the algorithm.
+# kmax sets upper limit of clusters to test against
+# B is the number of bootstrapped samples the function uses to test against. The reference dataset is generated using Monte Carlo simulations of the sampling process
+library(cluster)
+gap_stat <- clusGap(evs_forclustering, FUN = kmeans, nstart = 10,
+                    K.max = 5, B = 20)
+# gap stat suggests three clusters
+fviz_gap_stat(gap_stat)
+
+```
+```{r}
+install.packages("NbClust")
+library(NbClust)
+nb <- NbClust(evs_forclustering, distance = "euclidean", min.nc = 2,
+        max.nc = 10, method = "kmeans")
+
+fviz_nbclust(nb)
+```
+
+```{r}
+library(GGally)
+library(plotly)
+
+regression_clean$cluster <- as.factor(kmean_4$cluster)
+
+df4_clus_avg <- regression_clean %>%
+  group_by(cluster) %>%
+  summarize_if(is.numeric, mean)
+
+p <- ggparcoord(
+  data = df4_clus_avg, 
+  columns = c(5,7, 9, 11, 12, 21), 
+  groupColumn = "cluster", 
+  scale = "globalminmax", # no variable scaling is done; the range of the graphs is defined by the global minimum and the global maximum
+  order = "skewness") + 
+  labs(x = "Predictive variables", 
+       y = "value", 
+       title = "Clustering") +
+  theme(axis.text.x=element_text(angle=7, hjust=1))
+
+ggplotly(p)
+```
+
+
+```{r}
+norms_benes <- c(5,7, 9)
+harm_efficacy <- c(11, 12, 21)
+
+regression_clean %>% 
+  pivot_longer(cols = norms_benes,
+               names_to = "question", 
+               values_to = "response") %>% 
+  ggplot(aes(x = response, colour = cluster)) +
+  facet_wrap(vars(question), ncol = 1) +
+  geom_point(stat = "count") +
+  geom_line(stat = "count") +
+  labs(x = "Response", y = "Number of respondents")
+
+```
+```{r}
+regression_clean %>% 
+  pivot_longer(cols = harm_efficacy,
+               names_to = "question", 
+               values_to = "response") %>% 
+  ggplot(aes(x = response, colour = cluster)) +
+  facet_wrap(vars(question), ncol = 1) +
+  geom_point(stat = "count") +
+  geom_line(stat = "count") +
+  labs(x = "Response", y = "Number of respondents")
+```
+
+
+
+```{r}
+regression_clean %>%
+  mutate(Cluster = kmean_4$cluster) %>%
+  group_by(Cluster) %>%
+  summarise_all("mean")
+```
+#### Merging targeting variables to clusters
+```{r}
+original_data <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/dyn_national_20200828 - results-20200930-082116_NEW.csv", header=TRUE, stringsAsFactors = TRUE)
+
+targeting_data <- original_data %>% 
+  select(
+    matches("")
+  )
+
+merged_data <- merge(regression_clean2, original_data, by = 'respondent_id', all.x= F)
+
+
+
+
+
+
+
+```
+
+
