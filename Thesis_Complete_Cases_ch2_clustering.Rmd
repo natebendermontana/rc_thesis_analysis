@@ -16,6 +16,7 @@ library(tidyverse)
 library(dplyr)
 library(ggplot2)
 library(GGally)
+library(ggfortify)
 
 ```
 
@@ -37,63 +38,62 @@ round(res, 2)
 
 ```{r}
 # 4 clusters
-kmean_4 <- kmeans(evs_forclustering, 4)  # test three groups
+set.seed(38920174)
+
+kmean_4 <- kmeans(evs_forclustering, 4)
 kmean_4$centers
 kmean_4
-autoplot(kmean_4, na.omit(evs_forclustering), frame = TRUE)
+autoplot(kmean_4, evs_forclustering, frame = TRUE)
 
 ```
-
-```{r}
-kmean_2
-```
-
-
 
 ```{r, eval=T, echo=F, include=T}
 
-kmean_2 <- kmeans(evs_forclustering, 2)  # test two groups
-kmean_2$centers
+# Additional clusterings if needed
 
-autoplot(kmean_2, na.omit(evs_forclustering), frame = TRUE)
-
-# 3 cluster solution
-kmean_3 <- kmeans(evs_forclustering, 3)  # test three groups
-kmean_3$centers
-kmean_3
-
-autoplot(kmean_3, evs_forclustering, frame = TRUE)
-
-
-
-
-# 5 clusters
-kmean_5 <- kmeans(evs_forclustering, 5)  # test three groups
-kmean_5$centers
-kmean_5
-
-autoplot(kmean_5, evs_forclustering, frame = TRUE)
+# kmean_2 <- kmeans(evs_forclustering, 2)  # test two groups
+# kmean_2$centers
+# 
+# autoplot(kmean_2, na.omit(evs_forclustering), frame = TRUE)
+# 
+# # 3 cluster solution
+# kmean_3 <- kmeans(evs_forclustering, 3)  # test three groups
+# kmean_3$centers
+# kmean_3
+# 
+# autoplot(kmean_3, evs_forclustering, frame = TRUE)
+# 
+# # 5 clusters
+# kmean_5 <- kmeans(evs_forclustering, 5)  # test three groups
+# kmean_5$centers
+# kmean_5
+# 
+# autoplot(kmean_5, evs_forclustering, frame = TRUE)
 ```
+
+
 ```{r}
+# elbow method suggests 3 clusters.
+
 library(factoextra)
 
-# elbow method suggests 3 clusters.
 # Best balance between minimizing WSS while keeping total clusters to a reasonable number. 
 # The location of a bend (knee) in the plot is generally considered as an indicator of the appropriate number of clusters.
 fviz_nbclust(evs_forclustering, kmeans, method = "wss") +
 geom_vline(xintercept = 3, linetype = 2)
 ```
 
-
 ```{r}
-# Average silhouette method
+# Average silhouette method - suggests 5
+
 # the average silhouette approach measures the quality of a clustering. That is, it determines how well each object lies within its cluster. A high average silhouette width indicates a good clustering.
 
-# This method recommends two clusters
 fviz_nbclust(evs_forclustering, kmeans, method = "silhouette")
 ```
+
 ```{r}
-# Gap statistic
+# Gap statistic - suggests 3 clusters
+
 # The gap statistic compares the total intracluster variation for different values of k with their expected values under null reference distribution of the data (i.e. a distribution with no obvious clustering)
 
 # nstart option attempts multiple initial configurations and reports on the best one. For example, adding nstart=25 will generate 25 initial random centroids and choose the best one for the algorithm.
@@ -101,13 +101,15 @@ fviz_nbclust(evs_forclustering, kmeans, method = "silhouette")
 # B is the number of bootstrapped samples the function uses to test against. The reference dataset is generated using Monte Carlo simulations of the sampling process
 library(cluster)
 gap_stat <- clusGap(evs_forclustering, FUN = kmeans, nstart = 10,
-                    K.max = 5, B = 20)
+                    K.max = 20, B = 20)
 # gap stat suggests three clusters
 fviz_gap_stat(gap_stat)
 
 ```
+
 ```{r}
-install.packages("NbClust")
+# 30 indices method - majority rule recommendation is 4 clusters
+
 library(NbClust)
 nb <- NbClust(evs_forclustering, distance = "euclidean", min.nc = 2,
         max.nc = 10, method = "kmeans")
@@ -119,6 +121,8 @@ fviz_nbclust(nb)
 library(GGally)
 library(plotly)
 
+indices <- data.frame(colnames(regression_clean))
+
 regression_clean$cluster <- as.factor(kmean_4$cluster)
 
 df4_clus_avg <- regression_clean %>%
@@ -127,13 +131,13 @@ df4_clus_avg <- regression_clean %>%
 
 p <- ggparcoord(
   data = df4_clus_avg, 
-  columns = c(5,7, 9, 11, 12, 21), 
+  columns = c(6, 8, 10, 12, 13, 21), 
   groupColumn = "cluster", 
   scale = "globalminmax", # no variable scaling is done; the range of the graphs is defined by the global minimum and the global maximum
   order = "skewness") + 
   labs(x = "Predictive variables", 
-       y = "value", 
-       title = "Clustering") +
+       y = "Mean value", 
+       title = "Mean scores by cluster for\nthe regression predictive variables") +
   theme(axis.text.x=element_text(angle=7, hjust=1))
 
 ggplotly(p)
@@ -141,8 +145,8 @@ ggplotly(p)
 
 
 ```{r}
-norms_benes <- c(5,7, 9)
-harm_efficacy <- c(11, 12, 21)
+norms_benes <- c(6,8, 10)
+harm_efficacy <- c(12, 13, 22)
 
 regression_clean %>% 
   pivot_longer(cols = norms_benes,
@@ -175,23 +179,92 @@ regression_clean %>%
   group_by(Cluster) %>%
   summarise_all("mean")
 ```
+
 #### Merging targeting variables to clusters
 ```{r}
 original_data <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/dyn_national_20200828 - results-20200930-082116_NEW.csv", header=TRUE, stringsAsFactors = TRUE)
 
 targeting_data <- original_data %>% 
   select(
-    matches("")
+    matches("respondent_id"),
+    matches("sr_62a_donate_volunteer_coded"),
+    matches("sr_62b_donate_volunteer_coded"),
+    matches("sr_62c_donate_volunteer_coded"),
+    matches("sr_63a_brands_admire_coded"),
+    matches("sr_63b_brands_admire_coded"),
+    matches("sr_63c_brands_admire_coded"),
+    matches("sr_64_1_interesting_purchase_a"),
+    matches("sr_64_2_interesting_purchase_b"),
+    matches("sr_65_1_vacation_a"),
+    matches("sr_65_2_vacation_b"),
+    matches("sr_66_1_free_time_a"),
+    matches("sr_66_2_free_time_b"),
+    matches("sr_66_3_free_time_c"),
+    matches("sr_67a_follow_coded"),
+    matches("sr_67b_follow_coded"),
+    matches("sr_67c_follow_coded"),
+    matches("sr_68_1_websites_a"),
+    matches("sr_68_2_websites_b"),
+    matches("sr_68_3_websites_c"),
+    matches("sr_68_3_websites_c"),
+    matches("sr_68_3_websites_c"),
+    matches("sr_68_3_websites_c"),
   )
 
-merged_data <- merge(regression_clean2, original_data, by = 'respondent_id', all.x= F)
+# LEAVING OUT #69 FOR NOW - NEED TO THINK ABOUT HOW TO ANALYZE THAT ONE FIRST
+# original_data$sr_69a_activities_yoga
 
 
+# Merges (via left outer join) the "regression_clean" dataframe with the clusters indicated with the add'l targeting data from the original dataframe. Only data in the orig dataframe that matches a unique resp ID in "regression clean" gets merged. 
+merged_data <- merge(regression_clean, targeting_data, by.x = 'respondent_id', all.x= T)
+```
+
+```{r}
+# EXPERIMENTING WITH WORD CLOUDS BY CLUSTER
+library(wordcloud)
+library(RColorBrewer)
+library(wordcloud2)
+library(tm)
+
+merged_data$sr_62a_donate_volunteer_coded <- recode_factor(merged_data$sr_62a_donate_volunteer_coded, "Nonsense/Can't Code"="Nonsense", "NOnsense/Can't Code"="Nonsense", "St. Jude's Children's Hospital"="StJudesChildrensHospital", "United Way"="UnitedWay", "Salvation Army"="SalvationArmy", "Red Cross"="RedCross", "Public Media"="PublicMedia", "Pro Choice"="ProChoice", "Food Shelf"="FoodShelf", "Enviro Left"="EnviroLeft", "Conservative Christian"="ConservativeChristian", "Animal Humane Society"="AnimalHumaneSociety", "American Red Cross"="AmericanRedCross")
+
+merged_data$sr_62b_donate_volunteer_coded <- recode_factor(merged_data$sr_62b_donate_volunteer_coded, "Nonsense/Can't Code"="Nonsense", "NOnsense/Can't Code"="Nonsense", "St. Jude's Children's Hospital"="StJudesChildrensHospital", "United Way"="UnitedWay", "Salvation Army"="SalvationArmy", "Red Cross"="RedCross", "Public Media"="PublicMedia", "PUblic Media"="PublicMedia", "Pro Choice"="ProChoice", "Food Shelf"="FoodShelf", "Enviro Left"="EnviroLeft", "Conservative Christian"="ConservativeChristian", "Animal Humane Society"="AnimalHumaneSociety", "American Red Cross"="AmericanRedCross", "Higher Ed"="HigherEd")
+
+merged_data$sr_62c_donate_volunteer_coded <- recode_factor(merged_data$sr_62c_donate_volunteer_coded, "Nonsense/Can't Code"="Nonsense", "NOnsense/Can't Code"="Nonsense", "St. Jude's Children's Hospital"="StJudesChildrensHospital", "St. Jude's Children Hospital"="StJudesChildrensHospital", "United Way"="UnitedWay", "Salvation Army"="SalvationArmy", "Red Cross"="RedCross", "Public Media"="PublicMedia", "PUblic Media"="PublicMedia", "Pro Choice"="ProChoice", "Food Shelf"="FoodShelf", "Enviro Left"="EnviroLeft", "Conservative Christian"="ConservativeChristian", "Animal Humane Society"="AnimalHumaneSociety", "American Red Cross"="AmericanRedCross", "Higher Ed"="HigherEd")
+
+set.seed(1234) # for reproducibility 
+
+for (val in unique(merged_data$cluster)) {  # iterate through the clusters and create a word cloud for each
+  #Create a vector containing only the text
+  text <- c(as.character(merged_data$sr_62a_donate_volunteer_coded), as.character(merged_data$sr_62b_donate_volunteer_coded), as.character(merged_data$sr_62c_donate_volunteer_coded))
+  # Create a corpus  
+  docs <- Corpus(VectorSource(text))
+  
+  dtm <- TermDocumentMatrix(docs) 
+  matrix <- as.matrix(dtm) 
+  words <- sort(rowSums(matrix),decreasing=TRUE) 
+  df <- data.frame(word = names(words),freq=words)
+  df2<-df[!(df$word=="none" | df$word=="blank" | df$word=="nonsense"),]
+
+  
+  layout(matrix(c(1, 2), nrow=2), heights=c(1, 4))
+  par(mar=rep(0, 4))
+  plot.new()
+  text(x=0.5, y=0.5, print(paste("Cluster:",val)))
+  wordcloud(words = df2$word, 
+            freq = df2$freq, 
+            min.freq = 6,           
+            max.words=200, random.order=FALSE, rot.per=0.35,            
+            colors=brewer.pal(8, "Dark2"))
+  }
+  
 
 
 
 
 
 ```
+
+
 
 
