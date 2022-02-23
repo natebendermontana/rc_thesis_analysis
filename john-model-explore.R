@@ -3,6 +3,10 @@ library(caret)
 library(tidyverse)
 library(here)
 library(broom)
+install.packages("skimr")
+library(skimr)
+library(psych)
+
 
 regression_clean <- read_csv(here("cleandata","perenial_complete_for_analysis.csv"))
 
@@ -11,10 +15,11 @@ regression_clean <- regression_clean %>%
            case_when(
              sr_12a_actions_contacted_officials == "morethanonce" ~ 1,
              sr_12a_actions_contacted_officials == "once" ~ 1,
-             sr_12a_actions_contacted_officials == "nocontact" ~ 1,
+             sr_12a_actions_contacted_officials == "nocontact" ~ 0,
              TRUE ~ -1 # Just to be careful
            ))
 
+# table(regression_clean$sr_12a_actions_contacted_officials_binary)
 
 # set reference groups for regression
 regression_clean <- regression_clean %>% 
@@ -103,4 +108,6 @@ logit_contacted <- glm(sr_12a_actions_contacted_officials_binary ~
 
 logit_contacted_aic <- stepAIC(logit_contacted, direction="backward")
 
-tidy(logit_contracted_aic)
+tidy(logit_contacted_aic)
+
+summary(logit_contacted_aic)

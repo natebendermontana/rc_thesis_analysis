@@ -68,7 +68,7 @@ regression_clean <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/cl
 
 ```{r, eval=T, echo=F, include=T}
 # Build initial ordinal logistic regression model with all potential variables included
-levels(regression_clean$sr_12a_actions_contacted_officials)
+# levels(regression_clean$sr_12a_actions_contacted_officials)
 regression_clean$sr_12a_actions_contacted_officials_binary <- recode_factor(regression_clean$sr_12a_actions_contacted_officials, "nocontact"="0", "once"="1", "morethanonce"="1")
 
 regression_clean$sr_12a_actions_contacted_officials_binary <- as.character(regression_clean$sr_12a_actions_contacted_officials_binary)
@@ -125,7 +125,7 @@ library(randomForest)
 
 # reduce dataset down to just variables needed for saturated model, in order to make code later on much cleaner. 
 data_for_regression <- regression_clean %>% 
-  select(
+  dplyr::select(
     matches("sr_12a_actions_contacted_officials_binary"),
     matches("age_true"),
     matches("race_white_dumvar"),
@@ -163,7 +163,9 @@ data_for_regression <- regression_clean %>%
     matches("sr_41f_equity")
     )
 
-set.seed(19881)
+# 19881
+
+set.seed(39287456)
 default_idx = createDataPartition(data_for_regression$sr_12a_actions_contacted_officials_binary, p = 0.75, list = FALSE)
 default_train = data_for_regression[default_idx, ]
 default_test = data_for_regression[-default_idx, ]
@@ -216,6 +218,13 @@ logit_contacted_aic <- stepAIC(logit_contacted, direction="backward")
 
 ```{r}
 summary(logit_contacted_aic)
+
+library(broom)
+broom::tidy(logit_contacted_aic)  # gives output as dataframe
+
+
+
+
 ```
 
 
