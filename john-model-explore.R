@@ -3,10 +3,8 @@ library(caret)
 library(tidyverse)
 library(here)
 library(broom)
-install.packages("skimr")
 library(skimr)
 library(psych)
-
 
 regression_clean <- read_csv(here("cleandata","perenial_complete_for_analysis.csv"))
 
@@ -76,38 +74,65 @@ data_for_regression <- regression_clean %>%
     sr_41e_govt_do_more,
     sr_41f_equity)
 
+
+n.runs <- 20
 set.seed(19881)
 
-# ensures even split on response variable. 
-default_idx = caret::createDataPartition(as.factor(data_for_regression$sr_12a_actions_contacted_officials_binary), p = 0.75, list = FALSE)
-default_train = data_for_regression[default_idx, ]
-default_test = data_for_regression[-default_idx, ]
+if(exists("results")){
+  rm(results)
+}
+
+for(i in 1:n.runs){
+  # ensures even split on response variable. 
+  default_idx = caret::createDataPartition(as.factor(data_for_regression$sr_12a_actions_contacted_officials_binary), p = 0.75, list = FALSE)
+  default_train = data_for_regression[default_idx, ]
+  default_test = data_for_regression[-default_idx, ]
+  
+  logit_contacted <- glm(sr_12a_actions_contacted_officials_binary ~
+                           age_true + race_white_dumvar + gender_dumvar + children_dumvar +
+                           sr_75_religion_dumvar + sr_56_marital_status + sr_61_education +
+                           sr_71_employment_status + sr_72_income +
+                           sr_79_political_leaning + sr_7_believe_about_climate_change +
+                           descdynamicnorms_comp + desccontactnorms_all_comp +
+                           descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
+                           injunctmotivation_all_comp + cimbenefits_comp +
+                           cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
+                           sr_11_harm_future_generations_reversed +
+                           sr_21a_effective_actions_contacting_officials +
+                           efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
+                           behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
+                           behatt_coolexcitingeasy_comp +
+                           sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify +
+                           sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent +
+                           sr_41e_govt_do_more + sr_41f_equity, 
+                         data = default_train, 
+                         family=binomial)
+  
+  
+  logit_contacted_aic <- stepAIC(logit_contacted, direction="backward")
+  
+  if (i == 1) {
+    results <- tidy(logit_contacted_aic) %>% 
+      mutate(simulation=i)
+    
+  } else {
+    results <- results %>% 
+      bind_rows(tidy(logit_contacted_aic) %>% 
+                  mutate(simulation=i))
+    
+  }
+}
+
+results %>% 
+  group_by(term) %>% 
+  summarize(n = n(),
+            mean_est = mean(estimate),
+            min_est = min(estimate),
+            max_est = max(estimate),
+            mean_sd = mean(std.error)) %>% 
+  mutate(fraction_of_models = n/n.runs) %>% 
+  arrange(n)
 
 
 
-logit_contacted <- glm(sr_12a_actions_contacted_officials_binary ~
-                         age_true + race_white_dumvar + gender_dumvar + children_dumvar +
-                         sr_75_religion_dumvar + sr_56_marital_status + sr_61_education +
-                         sr_71_employment_status + sr_72_income +
-                         sr_79_political_leaning + sr_7_believe_about_climate_change +
-                         descdynamicnorms_comp + desccontactnorms_all_comp +
-                         descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
-                         injunctmotivation_all_comp + cimbenefits_comp +
-                         cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
-                         sr_11_harm_future_generations_reversed +
-                         sr_21a_effective_actions_contacting_officials +
-                         efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
-                         behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
-                         behatt_coolexcitingeasy_comp +
-                         sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify +
-                         sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent +
-                         sr_41e_govt_do_more + sr_41f_equity, 
-                       data = default_train, 
-                       family=binomial)
 
-
-logit_contacted_aic <- stepAIC(logit_contacted, direction="backward")
-
-tidy(logit_contacted_aic)
-
-summary(logit_contacted_aic)
