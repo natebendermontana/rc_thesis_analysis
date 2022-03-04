@@ -28,22 +28,31 @@ regression_clean <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/cl
 
 ### Logistic regression - cluster analysis
 ```{r, eval=T, echo=F, include=T}
-evs_forclustering <- regression_clean %>% 
-  select(desccontactnorms_all_comp, injunctcontactnorms_all_comp, cimbenefits_comp, sr_10_harm_you_personally_reversed, sr_11_harm_future_generations_reversed, sr_31_able_to_call)
 
-res <- cor(evs_forclustering, use = "complete.obs")
+evs_forclustering <- regression_clean %>% 
+  select(cimbenefits_comp,
+         desccontactnorms_all_comp,
+         age_true,
+         cimperceivedrisk_comp,
+         sr_31_able_to_call,
+         sr_10_harm_you_personally_reversed,
+         sr_11_harm_future_generations_reversed)
+
+scaled_clean <- scale(evs_forclustering)
+
+res <- cor(scaled_clean)
 round(res, 2)
-# .77 corr b/w injunctive and descriptive norms - too much?
+# .62 corr b/w personal harm and harm to future gens
 ```
 
 ```{r}
-# 4 clusters
+# 3 clusters
 set.seed(38920174)
 
-kmean_4 <- kmeans(evs_forclustering, 4)
-kmean_4$centers
-kmean_4
-autoplot(kmean_4, evs_forclustering, frame = TRUE)
+kmean_3 <- kmeans(scaled_clean, 3)
+kmean_3$centers
+kmean_3
+autoplot(kmean_3, scaled_clean, frame = TRUE)
 
 ```
 
@@ -73,26 +82,27 @@ autoplot(kmean_4, evs_forclustering, frame = TRUE)
 
 
 ```{r}
-# elbow method suggests 3 clusters.
+# elbow method suggests 2 or 3 clusters.
 
 library(factoextra)
 
 # Best balance between minimizing WSS while keeping total clusters to a reasonable number. 
 # The location of a bend (knee) in the plot is generally considered as an indicator of the appropriate number of clusters.
-fviz_nbclust(evs_forclustering, kmeans, method = "wss") +
+fviz_nbclust(scaled_clean, kmeans, method = "wss") +
 geom_vline(xintercept = 3, linetype = 2)
 ```
 
 ```{r}
-# Average silhouette method - suggests 5
+# Average silhouette method - suggests 2
 
 # the average silhouette approach measures the quality of a clustering. That is, it determines how well each object lies within its cluster. A high average silhouette width indicates a good clustering.
 
-fviz_nbclust(evs_forclustering, kmeans, method = "silhouette")
+fviz_nbclust(scaled_clean, kmeans, method = "silhouette")
 ```
 
 ```{r}
-# Gap statistic - suggests 3 clusters
+# Gap statistic - suggests 16 clusters - need to figure out why this is suggesting wildly higher # of clusters than other validation tests. 
+
 
 # The gap statistic compares the total intracluster variation for different values of k with their expected values under null reference distribution of the data (i.e. a distribution with no obvious clustering)
 
@@ -100,18 +110,17 @@ fviz_nbclust(evs_forclustering, kmeans, method = "silhouette")
 # kmax sets upper limit of clusters to test against
 # B is the number of bootstrapped samples the function uses to test against. The reference dataset is generated using Monte Carlo simulations of the sampling process
 library(cluster)
-gap_stat <- clusGap(evs_forclustering, FUN = kmeans, nstart = 10,
+gap_stat <- clusGap(scaled_clean, FUN = kmeans, nstart = 10,
                     K.max = 20, B = 20)
-# gap stat suggests three clusters
 fviz_gap_stat(gap_stat)
 
 ```
 
 ```{r}
-# 30 indices method - majority rule recommendation is 4 clusters
+# 30 indices method - majority rule recommendation is a tie b/w 2 and 3 clusters
 
 library(NbClust)
-nb <- NbClust(evs_forclustering, distance = "euclidean", min.nc = 2,
+nb <- NbClust(scaled_clean, distance = "euclidean", min.nc = 2,
         max.nc = 10, method = "kmeans")
 
 fviz_nbclust(nb)
@@ -121,20 +130,25 @@ fviz_nbclust(nb)
 library(GGally)
 library(plotly)
 
-indices <- data.frame(colnames(regression_clean))
+data.frame(colnames(regression_clean))
 
-regression_clean$cluster <- as.factor(kmean_4$cluster)
 
-df4_clus_avg <- regression_clean %>%
+# Group cluster results by mean for each variable in "regression clean"
+regression_clean$cluster <- as.factor(kmean_3$cluster)
+
+df3_clus_avg <- regression_clean %>%
   group_by(cluster) %>%
   summarize_if(is.numeric, mean)
 
+# Final EV list and indices
+# 6"CIM benefits", 8"Descriptive contact norms", , 11"Perceived risk", 22"Efficacy: able to call", 12"CC personal harm",  13"CC harm future generations" 32"Age"
+
 p <- ggparcoord(
-  data = df4_clus_avg, 
-  columns = c(6, 8, 10, 12, 13, 21), 
+  data = df3_clus_avg, 
+  columns = c(6, 10, 11, 12, 13, 21, 28), 
   groupColumn = "cluster", 
-  scale = "globalminmax", # no variable scaling is done; the range of the graphs is defined by the global minimum and the global maximum
-  order = "skewness") + 
+  scale = "std", # univariately, subtract mean and divide by standard deviation
+  order = c(6, 10, 11, 12, 13, 21, 28)) + 
   labs(x = "Predictive variables", 
        y = "Mean value", 
        title = "Mean scores by cluster for\nthe regression predictive variables") +
@@ -145,11 +159,10 @@ ggplotly(p)
 
 
 ```{r}
-norms_benes <- c(6,8, 10)
-harm_efficacy <- c(12, 13, 22)
+plot_1 <- c(6, 10, 11, 12)
 
 regression_clean %>% 
-  pivot_longer(cols = norms_benes,
+  pivot_longer(cols = plot_1,
                names_to = "question", 
                values_to = "response") %>% 
   ggplot(aes(x = response, colour = cluster)) +
@@ -159,9 +172,12 @@ regression_clean %>%
   labs(x = "Response", y = "Number of respondents")
 
 ```
+
 ```{r}
+plot_2 <- c(13, 21, 28)  # why in the hell aren't these indices the same as above?!?!?? Gah. 
+
 regression_clean %>% 
-  pivot_longer(cols = harm_efficacy,
+  pivot_longer(cols = plot_2,
                names_to = "question", 
                values_to = "response") %>% 
   ggplot(aes(x = response, colour = cluster)) +
@@ -173,6 +189,8 @@ regression_clean %>%
 
 
 
+
+#### IGNORE FOR THESIS - NOT NECESSARY
 ```{r}
 regression_clean %>%
   mutate(Cluster = kmean_4$cluster) %>%
