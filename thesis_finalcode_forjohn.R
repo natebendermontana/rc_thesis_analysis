@@ -33,7 +33,7 @@ regression_clean <- regression_clean %>%
 
 # Subset to only data for regression
 data_for_regression <- regression_clean %>% 
-  select(sr_12a_actions_contacted_officials_binary,
+  dplyr::select(sr_12a_actions_contacted_officials_binary,
          age_true,
          race_white_dumvar,
          gender_dumvar,
@@ -89,10 +89,13 @@ logit_final <- glm(sr_12a_actions_contacted_officials_binary~
                      sr_11_harm_future_generations_reversed+
                      injunctcontactnorms_all_comp,
                    data=default_train,family=binomial)
+library(MASS)
 logit_final_aic <- stepAIC(logit_final, direction="backward")
 
 # age gets dropped from the model
 summary(logit_final_aic)
+for_csv <- tidy(logit_final_aic)
+write.csv(for_csv,"/Users/natebender/Desktop/repo//RCthesisanalysis/output_tables/thesis_pastactionregmodel.csv", row.names = TRUE)
 
 # TESTING DATA
 logit_final_test <- glm(sr_12a_actions_contacted_officials_binary~
@@ -109,40 +112,48 @@ summary(logit_final_test)
 
 ### Validation tests  ####
 # the kappa statistic is a measure of how closely the instances classified by the machine learning classifier matched the data labeled as ground truth, controlling for the accuracy of a random classifier as measured by the expected accuracy
+library(blorr)
+blr_confusion_matrix(logit_final_aic)
 blr_confusion_matrix(logit_final_test)
 
-blr_model_fit_stats(logit_final_test)
+
+blr_model_fit_stats(logit_final_aic)
 
 # Variable inflation factors (rule of thumb: under 5 shows no worrisome collinearity)
-vif(logit_final_test)
+vif(logit_final_aic)
 
+library(lmtest)
 lrtest(logit_final_aic, logit_final) #not sig different than saturated model, all else being equal -- go with simpler model
 lrtest(logit_final_aic) #sig diff from null model, which is good
 
 #Hosmer-Lemeshow GOF test --> sensitive to group number, not good for binary predictors
 #https://stats.stackexchange.com/questions/186219/how-many-groups-to-use-in-hosmer-and-lemeshow-test
 # no sig values --> safe to say that there is no evidence of poor model fit
+library(ResourceSelection)
 for (i in 4:15) {
-  print(hoslem.test(default_test$sr_12a_actions_contacted_officials_binary, fitted(logit_final_test), g=i) $p.value)
+  print(hoslem.test(default_train$sr_12a_actions_contacted_officials_binary, fitted(logit_final_aic), g=i) $p.value)
 } 
 
 # Via Cook's Distance - no evidence of influential points 
-plot(logit_final_test)
+plot(logit_final_aic)
 
 ### Visualizing model #### 
 # JC - should I be visualizing this using the training or testing model? My feeling is visualize using the training model, 
 # and only use the testing model to talk about accuracy score via cross-validation. Correct?
 
 # Exponentiated coefficients - showing in terms of odds ratios, not log odds
+library(broom)
 m1_log_preds = tidy(logit_final_aic, conf.int = T, exponentiate = T) %>%
 mutate(Model = "Past contact")
 m1_log_predstest <- subset(m1_log_preds, term !="(Intercept)") #& p.value < 0.05)  # remove intercept
 m1_log_predstest <- m1_log_predstest %>%
   mutate(term = c("CIM benefits", "Descriptive norms", "Perceived risk", "Efficacy: able to call", "Human ingenuity", "CC personal harm",  "CC harm future generations", "Injunctive norms"))
+write.csv(m1_log_predstest,"/Users/natebender/Desktop/repo//RCthesisanalysis/output_tables/thesis_EXPpastactionregmodel.csv", row.names = TRUE)
+
 
 # Plot
 #pdf("ThesisPastaction_oddsratio_plot.pdf") # starts writing a PDF to file
-#png("ThesisPastaction_oddsratio_plot.png") # starts writing a PDF to file
+png("ThesisPastaction_oddsratio_plot.png") # starts writing a PDF to file
 zp1 <- ggplot(m1_log_predstest, aes(colour = Model))
 zp1 <- zp1 + geom_hline(yintercept = 1, colour = gray(1/2), lty = 2)
 zp1 <- zp1 + geom_linerange(aes(x = term, ymin = conf.low,
@@ -155,14 +166,14 @@ zp1 <- zp1 + geom_pointrange(aes(x = term, y = estimate, ymin = conf.low,
 zp1 <- zp1 + coord_flip() + theme_bw()
 INTzp1_log <- zp1 + ggtitle("What influences past representative contact?") + ylab("Odds Ratio") + xlab("Variable")
 print(INTzp1_log)  # The trick to these is position_dodge().
-#dev.off()
+dev.off()
 
 
 # Cluster analysis ####
 # Subset to just the eight predictive variables
 # "CIM benefits", "Descriptive norms", "Perceived risk", "Efficacy: able to call", "Human ingenuity", "CC personal harm",  "CC harm future generations", "Injunctive norms"))
 evs_forclustering <- regression_clean %>% 
-  select(cimbenefits_comp,
+  dplyr::select(cimbenefits_comp,
          desccontactnorms_all_comp,
          cimperceivedrisk_comp,
          sr_31_able_to_call,

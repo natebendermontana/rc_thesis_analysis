@@ -37,19 +37,7 @@ library(blorr)
 
 ```
 
-## Outline
-This document serves two functions: as Nate's detailed reference for steps and assumptions taken during analysis, and more broadly to communicate the analysis findings to advisors. Feel free to skip granular sections as needed.   
 
-The analysis seeks to answer my thesis research questions:  
-  
-RQ1: Which explanatory variables from a variety of studies and theories are most strongly associated with climate activism, specifically the action of contacting elected officials?   
-  
-RQ2: How might we define behaviorally oriented segments and which segments are specifically related to the climate change activism behavior “contacting elected officials”?
-
-At this point, the code only extends to RQ1. 
-
-Table of contents:  
-5) Regression modelling approaches
 
 ```{r, eval=T, echo=F, include=T}
 regression_clean <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/cleandata/perenial_complete_for_analysis.csv", header=TRUE, stringsAsFactors = TRUE)
@@ -86,7 +74,7 @@ regression_clean <- regression_clean %>%
 ```{r, eval=T, echo=F, include=T}
 # reduce dataset down to just variables needed for saturated model, in order to make code later on much cleaner. 
 data_for_regression <- regression_clean %>% 
-  select(sr_12a_actions_contacted_officials_binary,
+  dplyr::select(sr_12a_actions_contacted_officials_binary,
     age_true,
     race_white_dumvar,
     gender_dumvar,
