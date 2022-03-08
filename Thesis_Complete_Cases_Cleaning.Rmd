@@ -225,6 +225,8 @@ d <- read.csv("/Users/natebender/Desktop/repo/RCthesisanalysis/dyn_national_2020
 
 d_accept <- d %>% 
   dplyr::filter(reject == 0)
+
+sessionInfo()
 ```
 
 ## Outline
