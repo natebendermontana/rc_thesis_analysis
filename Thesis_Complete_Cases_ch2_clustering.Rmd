@@ -30,7 +30,7 @@ regression_clean <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/cl
 ```{r, eval=T, echo=F, include=T}
 
 evs_forclustering <- regression_clean %>% 
-  select(cimbenefits_comp,
+  dplyr::select(cimbenefits_comp,
          desccontactnorms_all_comp,
          age_true,
          cimperceivedrisk_comp,
@@ -101,7 +101,7 @@ fviz_nbclust(scaled_clean, kmeans, method = "silhouette")
 ```
 
 ```{r}
-# Gap statistic - suggests 16 clusters - need to figure out why this is suggesting wildly higher # of clusters than other validation tests. 
+# Gap statistic - suggests 10 clusters - need to figure out why this is suggesting wildly higher # of clusters than other validation tests. 
 
 
 # The gap statistic compares the total intracluster variation for different values of k with their expected values under null reference distribution of the data (i.e. a distribution with no obvious clustering)
@@ -110,8 +110,8 @@ fviz_nbclust(scaled_clean, kmeans, method = "silhouette")
 # kmax sets upper limit of clusters to test against
 # B is the number of bootstrapped samples the function uses to test against. The reference dataset is generated using Monte Carlo simulations of the sampling process
 library(cluster)
-gap_stat <- clusGap(scaled_clean, FUN = kmeans, nstart = 10,
-                    K.max = 20, B = 20)
+gap_stat <- clusGap(scaled_clean, FUN = kmeans, nstart = 25,
+                    K.max = 10, B = 500, d.power = 2)
 fviz_gap_stat(gap_stat)
 
 ```
@@ -143,6 +143,8 @@ df3_clus_avg <- regression_clean %>%
 # Final EV list and indices
 # 6"CIM benefits", 8"Descriptive contact norms", , 11"Perceived risk", 22"Efficacy: able to call", 12"CC personal harm",  13"CC harm future generations" 32"Age"
 
+# varnames <- c("CIM benefits", "Descriptive contact norms", "Perceived risk", "Efficacy: able to call", "CC personal harm",  "CC harm future generations", "Age")
+
 p <- ggparcoord(
   data = df3_clus_avg, 
   columns = c(6, 10, 11, 12, 13, 21, 28), 
@@ -152,6 +154,7 @@ p <- ggparcoord(
   labs(x = "Predictive variables", 
        y = "Mean value", 
        title = "Mean scores by cluster for\nthe regression predictive variables") +
+  # scale_fill_manual(labels=varnames) +
   theme(axis.text.x=element_text(angle=7, hjust=1))
 
 ggplotly(p)

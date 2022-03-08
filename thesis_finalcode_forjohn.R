@@ -98,8 +98,9 @@ logit_final <- glm(sr_12a_actions_contacted_officials_binary~
 library(MASS)
 logit_final_aic <- stepAIC(logit_final, direction="backward")
 
-# age gets dropped from the model
-summary(logit_final_aic)
+summary(logit_final)  # skipping the final AIC pass
+#summary(logit_final_aic) # age gets dropped from the model
+
 for_csv <- tidy(logit_final_aic)
 write.csv(for_csv,"/Users/natebender/Desktop/repo//RCthesisanalysis/output_tables/thesis_pastactionregmodel.csv", row.names = TRUE)
 
@@ -159,7 +160,7 @@ write.csv(m1_log_predstest,"/Users/natebender/Desktop/repo//RCthesisanalysis/out
 
 # Plot
 #pdf("ThesisPastaction_oddsratio_plot.pdf") # starts writing a PDF to file
-png("ThesisPastaction_oddsratio_plot.png") # starts writing a PDF to file
+# png("ThesisPastaction_oddsratio_plot.png") # starts writing a PDF to file
 zp1 <- ggplot(m1_log_predstest, aes(colour = Model))
 zp1 <- zp1 + geom_hline(yintercept = 1, colour = gray(1/2), lty = 2)
 zp1 <- zp1 + geom_linerange(aes(x = term, ymin = conf.low,
@@ -201,17 +202,17 @@ library(factoextra)
 fviz_nbclust(scaled_clean, kmeans, method = "wss") +
   geom_vline(xintercept = 3, linetype = 2)
 
-# Average silhouette method - suggests 2
+# Average silhouette method - suggests 3
 fviz_nbclust(scaled_clean, kmeans, method = "silhouette")
 
-# Gap statistic - suggests 11 clusters - need to figure out why this is suggesting wildly higher # of clusters than other validation tests. 
+# Gap statistic - suggests 12 clusters - need to figure out why this is suggesting wildly higher # of clusters than other validation tests. 
 # nstart option attempts multiple initial configurations and reports on the best one. 
 # For example, adding nstart=25 will generate 25 initial random centroids and choose the best one for the algorithm.
 # kmax sets upper limit of clusters to test against
 # B is the number of bootstrapped samples the function uses to test against. The reference dataset is generated using Monte Carlo simulations of the sampling process
 library(cluster)
-gap_stat <- clusGap(scaled_clean, FUN = kmeans, nstart = 10,
-                    K.max = 20, B = 20)
+gap_stat <- clusGap(scaled_clean, FUN = kmeans, nstart = 10, d.power = 2,
+                    K.max = 20, B = 500)
 fviz_gap_stat(gap_stat)
 
 # 30 indices method - majority rule recommendation is 3 clusters
@@ -233,9 +234,22 @@ library(plotly)
 
 # Group cluster results by mean for each variable in regression_clean dataframe
 regression_clean$cluster <- as.factor(kmean_3$cluster)
+
 df3_clus_avg <- regression_clean %>%
   group_by(cluster) %>%
   summarize_if(is.numeric, mean)
+
+testtable <- df3_clus_avg %>% 
+  dplyr::select(cimbenefits_comp,
+                desccontactnorms_all_comp,
+                cimperceivedrisk_comp,
+                sr_31_able_to_call,
+                sr_41c_ingenuity,
+                sr_10_harm_you_personally_reversed,
+                sr_11_harm_future_generations_reversed,
+                injunctcontactnorms_all_comp)
+write.csv(testtable,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters.csv", row.names = TRUE)
+
 
 # Final EV list and indices
 # 6"CIM benefits", 8"Descriptive contact norms", , 11"Perceived risk", 22 (but for some reason it's 21 below)"Efficacy: able to call", 12"CC personal harm",  13"CC harm future generations" 24"sr_41c_ingenuity "injunctcontactnorms_all_comp
@@ -245,10 +259,10 @@ p <- ggparcoord(
   columns = c(6, 8, 10, 11, 12, 13, 21, 24), # If I could find a way to call these by name instead of index that would be great
   groupColumn = "cluster", 
   scale = "std", # univariately, subtract mean and divide by standard deviation
-  order = c(24, 6, 8, 10, 21, 11, 12, 13)) + 
+  order = c(24, 8, 6, 10, 21, 11, 13, 12)) + 
   labs(x = "Predictive variables", 
        y = "Mean value", 
-       title = "Mean scores by cluster for\nthe regression predictive variables") +
+       title = "Mean predictive variable scores by cluster") +
   theme(axis.text.x=element_text(angle=7, hjust=1))
 ggplotly(p)
 
@@ -264,7 +278,7 @@ regression_clean %>%
   geom_line(stat = "count") +
   labs(x = "Response", y = "Number of respondents") 
 
-plot_2 <- c(12, 13, 22, 25)  # why in the hell aren't last two indices the same as above?!?!?? Gah. 
+plot_2 <- c(12, 13, 22, 25)  # JC - low priority question but why in the hell aren't last two indices the same as above?!?!?? Gah. 
 regression_clean %>% 
   pivot_longer(cols = plot_2,
                names_to = "question", 
@@ -275,5 +289,19 @@ regression_clean %>%
   geom_line(stat = "count") +
   labs(x = "Response", y = "Number of respondents")
 
+
+### Descriptive stats on clusters ####
+
+df3_clus_avg  # for means of continuous data grouped by cluster
+
+library(purrr)
+regression_clean %>%  # for categorical vars desc stats. List is in-progress, just experimenting at the moment. 
+  dplyr::select(
+    age_true,
+    sr_72_income,
+    sr_71_employment_status
+  ) %>% 
+  split(regression_clean$cluster) %>% 
+  map(summary)
 
 
