@@ -70,6 +70,10 @@ regression_clean <- regression_clean %>%
 
 ```
 
+```{r}
+# describe(regression_clean)
+```
+
 
 ```{r, eval=T, echo=F, include=T}
 # reduce dataset down to just variables needed for saturated model, in order to make code later on much cleaner. 
@@ -115,7 +119,7 @@ data_for_regression <- regression_clean %>%
 ```
 
 ```{r}
-n.runs <- 50
+n.runs <- 100
 set.seed(19881)
 ```
 
@@ -180,7 +184,7 @@ df <- results %>%
 
 print(df, n = Inf)
 
-write.csv(df,"/Users/natebender/Desktop/ThesisPastactionregmodel.csv", row.names = TRUE)
+write.csv(df,"/Users/natebender/Desktop/ThesisPastactionregmodel_simulations.csv", row.names = TRUE)
 
 ```
 
