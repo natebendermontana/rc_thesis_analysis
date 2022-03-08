@@ -131,7 +131,7 @@ results %>%
             max_est = max(estimate),
             mean_sd = mean(std.error)) %>% 
   mutate(fraction_of_models = n/n.runs) %>% 
-  arrange(n)
+  arrange(n) 
 
 
 
