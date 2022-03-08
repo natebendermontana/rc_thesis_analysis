@@ -5,8 +5,14 @@ library(dplyr)
 library(ggplot2)
 library(GGally)
 library(ggfortify)
+library(here)
 
-regression_clean <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/cleandata/perenial_complete_for_analysis.csv", header=TRUE, stringsAsFactors = TRUE)
+#regression_clean <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/cleandata/perenial_complete_for_analysis.csv", header=TRUE, stringsAsFactors = TRUE)
+
+# JC: get on board with readr and here!
+regression_clean <- read_csv(here("cleandata","perenial_complete_for_analysis.csv"))
+  
+
 
 regression_clean <- regression_clean %>% 
   mutate(sr_12a_actions_contacted_officials_binary = 
