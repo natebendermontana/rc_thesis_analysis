@@ -5,14 +5,14 @@ library(dplyr)
 library(ggplot2)
 library(GGally)
 library(ggfortify)
+library(broom)
 library(here)
+library(ModelMetrics) # JC: for "kappa"
 
 #regression_clean <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/cleandata/perenial_complete_for_analysis.csv", header=TRUE, stringsAsFactors = TRUE)
 
 # JC: get on board with readr and here!
 regression_clean <- read_csv(here("cleandata","perenial_complete_for_analysis.csv"))
-  
-
 
 regression_clean <- regression_clean %>% 
   mutate(sr_12a_actions_contacted_officials_binary = 
@@ -76,9 +76,11 @@ data_for_regression <- regression_clean %>%
          sr_41f_equity)
 
 set.seed(19881)
-default_idx = caret::createDataPartition(as.factor(data_for_regression$sr_12a_actions_contacted_officials_binary), p = 0.75, list = FALSE)
-default_train = data_for_regression[default_idx, ]
-default_test = data_for_regression[-default_idx, ]
+
+# JC: stick with "<-" for assignment in R
+default_idx <- caret::createDataPartition(as.factor(data_for_regression$sr_12a_actions_contacted_officials_binary), p = 0.75, list = FALSE)
+default_train <- data_for_regression[default_idx, ]
+default_test <- data_for_regression[-default_idx, ]
 
 ### Create models ####
 
@@ -95,28 +97,127 @@ logit_final <- glm(sr_12a_actions_contacted_officials_binary~
                      sr_11_harm_future_generations_reversed+
                      injunctcontactnorms_all_comp,
                    data=default_train,family=binomial)
-library(MASS)
-logit_final_aic <- stepAIC(logit_final, direction="backward")
+
+# JC: just doing the final one
+#library(MASS)
+#logit_final_aic <- stepAIC(logit_final, direction="backward")
 
 summary(logit_final)  # skipping the final AIC pass
 #summary(logit_final_aic) # age gets dropped from the model
 
-for_csv <- tidy(logit_final_aic)
-write.csv(for_csv,"/Users/natebender/Desktop/repo//RCthesisanalysis/output_tables/thesis_pastactionregmodel.csv", row.names = TRUE)
+#for_csv <- tidy(logit_final_aic)
+#write.csv(for_csv,"/Users/natebender/Desktop/repo//RCthesisanalysis/output_tables/thesis_pastactionregmodel.csv", row.names = TRUE)
+
+# JC: Based on some looking below, I think our model will perform better
+# if we pick a cutoff other than 0.5. Let's see which cutoff gives
+# the best performance on the kappa stat
+
+default_train <- default_train %>% 
+  mutate(contacted_prob = predict(logit_final,newdata=default_train,type="response"),
+         contacted = sr_12a_actions_contacted_officials_binary) 
+  # Your tolerance of incredibly long column names mystifies me. 
+
+prob.cutoff <- 0.5
+
+default_train <- default_train %>% 
+  mutate(contacted_est = if_else(contacted_prob <= prob.cutoff,0,1))
+
+# Training confusion matrix
+table("actual"=default_train$contacted,"estimated"=default_train$contacted_est)
+
+kappa(default_train$contacted,default_train$contacted_est)
+# Appears that kappa takes a cutoff, so we don't need the above. Leaving
+# for posterity. Let's test
+
+kappa(default_train$contacted,default_train$contacted_prob,cutoff = 0.5)
+kappa(default_train$contacted,default_train$contacted_prob,cutoff = 0.4)
+kappa(default_train$contacted,default_train$contacted_prob,cutoff = 0.6)
+
+kappa.test <- tibble(cutoff=seq(0.05,0.75,by=0.01),
+                     kappa=0.0)
+
+for(i in 1:nrow(kappa.test)){
+  kappa.test$kappa[i] <- kappa(default_train$contacted,
+                               default_train$contacted_prob,
+                               cutoff = kappa.test$cutoff[i])
+}
+
+ggplot(kappa.test,
+       aes(x=cutoff,y=kappa)) + 
+  geom_line() + 
+  stat_smooth() + 
+  theme_minimal()
+
+# Okay, looks like 0.4 is maybe optimal
+kappa.test[which.max(kappa.test$kappa),]
+# Alright, now I'm going to jump back down to the 
+# work I was doing evaluating the test data.
+
+
+# JC: Okay, this is where trouble starts. Your testing data should *only* be
+# used for evaluation. You're grading your own homework by refitting the model 
+# on the testing data. I'm going to comment out the bad steps
+
 
 # TESTING DATA
-logit_final_test <- glm(sr_12a_actions_contacted_officials_binary~
-                          cimbenefits_comp+
-                          desccontactnorms_all_comp+
-                          cimperceivedrisk_comp+
-                          sr_31_able_to_call+
-                          sr_41c_ingenuity+
-                          sr_10_harm_you_personally_reversed+
-                          sr_11_harm_future_generations_reversed+
-                          injunctcontactnorms_all_comp,
-                        data=default_test,family=binomial)
-summary(logit_final_test)
+# logit_final_test <- glm(sr_12a_actions_contacted_officials_binary~
+#                           cimbenefits_comp+
+#                           desccontactnorms_all_comp+
+#                           cimperceivedrisk_comp+
+#                           sr_31_able_to_call+
+#                           sr_41c_ingenuity+
+#                           sr_10_harm_you_personally_reversed+
+#                           sr_11_harm_future_generations_reversed+
+#                           injunctcontactnorms_all_comp,
+#                         data=default_test,family=binomial)
+# summary(logit_final_test)
 
+# JC: my stuff starts here
+default_test <- default_test %>% 
+  mutate(contacted_prob = predict(logit_final,newdata=default_test,type="response"))
+
+# Let's look at some results
+default_test %>% 
+  select(contacted_prob, sr_12a_actions_contacted_officials_binary) %>% 
+  slice_sample(n=10) %>% 
+  arrange(contacted_prob)
+
+# Seems like we're going to need a custom probability cutoff (0.5 might not
+# be optimal). Going back up to add that in where we do training.
+
+# Using a cutoff of 0.4
+default_test <- default_test %>% 
+  mutate(contacted_est = if_else(contacted_prob <= 0.4,0,1),
+         contacted = sr_12a_actions_contacted_officials_binary)
+
+# Testing confusion matrix
+table("actual"=default_test$contacted,"estimated"=default_test$contacted_est)
+
+# Accuracy is
+111/(111+15) # pretty legit
+
+kappa(default_test$contacted,default_test$contacted_est)
+# 0.52 Kappa. Also not bad.
+
+# Making a quick chart for Alex. Only 21 contacts, so just doing quintiles
+default_test <- default_test %>% 
+  mutate(prob_tier = cut(contacted_prob,
+                         breaks=quantile(contacted_prob,
+                                         probs=0:5/5),
+                         include.lowest=T))
+
+default_test %>% 
+  group_by(prob_tier) %>% 
+  summarize(frac_contacted = mean(contacted)) %>% 
+  ggplot(aes(x=prob_tier,y=frac_contacted)) +
+  geom_col() + 
+  theme_minimal() + 
+  labs(x="Probability Slice",y="Fraction in Tier Contacting") + 
+  scale_y_continuous(label=scales::percent_format())
+
+
+
+# end of eval stuff for JC
 ### Validation tests  ####
 # the kappa statistic is a measure of how closely the instances classified by the machine learning classifier matched the data labeled as ground truth, controlling for the accuracy of a random classifier as measured by the expected accuracy
 library(blorr)
