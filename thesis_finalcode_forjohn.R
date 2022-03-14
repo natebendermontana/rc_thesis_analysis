@@ -105,6 +105,49 @@ logit_final <- glm(sr_12a_actions_contacted_officials_binary~
 summary(logit_final)  # skipping the final AIC pass
 #summary(logit_final_aic) # age gets dropped from the model
 
+# JC 3/14: Here's a quick coef plot
+
+pretty.names <- tibble(
+  term = c("(Intercept)","cimbenefits_comp","desccontactnorms_all_comp",
+           "age_true","cimperceivedrisk_comp","sr_31_able_to_call",
+           "sr_41c_ingenuity","sr_10_harm_you_personally_reversed",
+           "sr_11_harm_future_generations_reversed",
+           "injunctcontactnorms_all_comp"), 
+  pretty_term = c("Intercept","CIM Benefits","Desc Norms",
+                  "Age",paste("Nate fill in",1:6))
+)
+
+
+logit_final_results <- tidy(logit_final) %>% 
+  mutate(exp_est = exp(estimate),
+         lb = exp(estimate - 2*std.error),
+         ub = exp(estimate + 2*std.error)) 
+
+logit_final_results <- logit_final_results %>% 
+  left_join(pretty.names,by="term") %>% 
+  mutate(term = fct_reorder(term,estimate),
+         pretty_term = fct_reorder(pretty_term,estimate))
+
+ggplot(logit_final_results %>% 
+         filter(term != "(Intercept)"),
+       aes(x=exp_est,y=term)) + 
+  geom_vline(xintercept = 1,color="gray80") + 
+  geom_point() + 
+  theme_minimal() + 
+  labs(x="Odds Multiplier",y="") + 
+  geom_errorbarh(aes(y=term,xmin=lb,xmax=ub),height=0.1) 
+
+# Example that won't really work till you fill in the names
+ggplot(logit_final_results %>% 
+         filter(term != "(Intercept)"),
+       aes(x=exp_est,y=pretty_term)) + 
+  geom_vline(xintercept = 1,color="gray80") + 
+  geom_point() + 
+  theme_minimal() + 
+  labs(x="Odds Multiplier",y="") + 
+  geom_errorbarh(aes(y=pretty_term,xmin=lb,xmax=ub),height=0.1) 
+
+
 #for_csv <- tidy(logit_final_aic)
 #write.csv(for_csv,"/Users/natebender/Desktop/repo//RCthesisanalysis/output_tables/thesis_pastactionregmodel.csv", row.names = TRUE)
 
