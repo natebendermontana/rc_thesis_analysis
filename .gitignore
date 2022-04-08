@@ -1,4 +1,6 @@
 /old
+/plots
+/output_tables
 *.png
 *.pdf
 

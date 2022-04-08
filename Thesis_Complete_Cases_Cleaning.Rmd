@@ -183,29 +183,18 @@ knitr::opts_chunk$set(echo = TRUE)
 ### Packages / libraries / load data & filter rejected out 
 
 setwd("/Users/natebender/Desktop/repo/RCthesisanalysis/")
-# install.packages("ltm")
-# install.packages("fBasics")
-# install.packages("ggcorrplot")
-# install.packages("fastDummies")
-# install.packages("brant")
-# install.packages("generalhoslem")
-# install.packages("DescTools")
-# install.packages("oglmx")
 
 library(DescTools)
 library(broom)
 library(brant)
-library(generalhoslem)
 library(tidyr)
 library(lmtest)  #lrtest
 library(nortest)  #sf.test
 library(ResourceSelection)  #hoslem.test
 library(nnet)
-library(oglmx)
 
 library(psych)
 library(tidyverse)
-library(dplyr)
 library(ggplot2)
 library(GGally)
 library(ggfortify)
@@ -219,6 +208,8 @@ library(car)
 library(fastDummies)
 library(MASS)
 library(Hmisc)
+library(dplyr)
+
 
 # Load data, create second dataset of only accepted responses
 d <- read.csv("/Users/natebender/Desktop/repo/RCthesisanalysis/dyn_national_20200828 - results-20200930-082116_NEW.csv")
@@ -226,7 +217,6 @@ d <- read.csv("/Users/natebender/Desktop/repo/RCthesisanalysis/dyn_national_2020
 d_accept <- d %>% 
   dplyr::filter(reject == 0)
 
-sessionInfo()
 ```
 
 ## Outline
@@ -251,7 +241,7 @@ Table of contents:
 ## Variable renaming, cleanup, listwise deletion
 ```{r, eval=T, echo=F, include=T}
 # rename 19a parents var b/c it's misspelled
-d_accept <- rename(d_accept, sr_19a_contacting_officials_parents = sr_19a_contacting_officials__parents)
+d_accept <- dplyr::rename(d_accept, sr_19a_contacting_officials_parents = sr_19a_contacting_officials__parents)
 
 # rename 37_foolish to _sensible to align with other wordings in this group (q32-39).
 d_accept <- rename(d_accept, sr_37_contact_sensible = sr_37_contact_foolish)
@@ -841,6 +831,59 @@ sapply(d_worldviews, sd, na.rm=TRUE)
 ```
 $$\\[.05in]$$
 
+## Creating temp dataframe for desc stats on only the 506 responses for analysis, before combining categorical vars
+```{r}
+d_accept$sr_61_education <- factor(d_accept$sr_61_education, ordered=TRUE)
+descstats_df <- d_accept %>% dplyr::select(
+  matches("respondent_id"),
+  matches("sr_12a_actions_contacted_officials"),
+  matches("sr_13a_takeactions_contact_officials"),
+  -matches("sr_12a_actions_contacted_officials_factor"),
+  matches("descdynamicnorms_comp"),
+  matches("desccontactnorms_all_comp"),
+  matches("descrolemodelnorms_all_comp"),
+  matches("injunctcontactnorms_all_comp"),
+  matches("injunctmotivation_all_comp"),
+  matches("cimbenefits_comp"),
+  matches("cimperceivedrisk_comp"),
+  matches("sr_10_harm_you_personally_reversed"),
+  matches("sr_11_harm_future_generations_reversed"),
+  matches("sr_21a_effective_actions_contacting_officials"),
+  matches("efficacy_effectiveness_all_comp"),
+  matches("efficacy_competresp_all_comp"),
+  matches("behatt_admirablegood_comp"),
+  matches("behatt_usefulpleasantsensible_comp"),
+  matches("behatt_coolexcitingeasy_comp"),
+  matches("sr_7_believe_about_climate_change"),
+  matches("sr_30_easy_to_call"),
+  matches("sr_31_able_to_call"),
+  matches("sr_41a_right_to_modify"),
+  matches("sr_41b_laws_of_nature"),
+  matches("sr_41c_ingenuity"),
+  matches("sr_41d_impotent"),
+  matches("sr_41e_govt_do_more"),
+  matches("sr_41f_equity"),
+  matches("race_white_dumvar"),
+  matches("children_dumvar"),
+  matches("gender_dumvar"),
+  matches("age_true"),
+  -matches("age_range"),
+  matches("sr_56_marital_status"),
+  matches("sr_60_residence"),
+  matches("sr_61_education"),
+  matches("sr_71_employment_status"),
+  matches("sr_72_income"),
+  matches("sr_75_religion_dumvar"),
+  matches("sr_78_political_affiliation"),
+  matches("sr_79_political_leaning")
+)
+# listwise deletion
+descstats_complete <- descstats_df[complete.cases(descstats_df), ]
+dim(descstats_complete)[1] # responses
+dim(descstats_complete)[2] # variables
+
+describe(descstats_complete$sr_60_residence)
+```
 
 
 ## EDA - Categorical variables factoring & levels reduction

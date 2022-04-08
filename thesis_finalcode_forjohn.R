@@ -1,13 +1,13 @@
 # Regression ####
 ### Setup data ####
 library(tidyverse)
-library(dplyr)
 library(ggplot2)
 library(GGally)
 library(ggfortify)
 library(broom)
 library(here)
 library(ModelMetrics) # JC: for "kappa"
+library(dplyr)
 
 #regression_clean <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/cleandata/perenial_complete_for_analysis.csv", header=TRUE, stringsAsFactors = TRUE)
 
@@ -113,8 +113,10 @@ pretty.names <- tibble(
            "sr_41c_ingenuity","sr_10_harm_you_personally_reversed",
            "sr_11_harm_future_generations_reversed",
            "injunctcontactnorms_all_comp"), 
-  pretty_term = c("Intercept","CIM Benefits","Desc Norms",
-                  "Age",paste("Nate fill in",1:6))
+  pretty_term = c("Intercept","Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
+                  "Age", "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
+                  "Personal Harm", "Future Generations Harm", "Injunctive Norms"),
+  paste(1:10)
 )
 
 
@@ -138,18 +140,19 @@ ggplot(logit_final_results %>%
   geom_errorbarh(aes(y=term,xmin=lb,xmax=ub),height=0.1) 
 
 # Example that won't really work till you fill in the names
+png("Thesis_oddsratio_chart.png") # starts writing a png to file
 ggplot(logit_final_results %>% 
-         filter(term != "(Intercept)"),
+         dplyr::filter(term != "(Intercept)"),
        aes(x=exp_est,y=pretty_term)) + 
   geom_vline(xintercept = 1,color="gray80") + 
   geom_point() + 
   theme_minimal() + 
   labs(x="Odds Multiplier",y="") + 
   geom_errorbarh(aes(y=pretty_term,xmin=lb,xmax=ub),height=0.1) 
+dev.off()
 
-
-#for_csv <- tidy(logit_final_aic)
-#write.csv(for_csv,"/Users/natebender/Desktop/repo//RCthesisanalysis/output_tables/thesis_pastactionregmodel.csv", row.names = TRUE)
+for_csv <- tidy(logit_final)
+write.csv(for_csv,"/Users/natebender/Desktop/repo//RCthesisanalysis/output_tables/thesis_pastactionregmodel.csv", row.names = TRUE)
 
 # JC: Based on some looking below, I think our model will perform better
 # if we pick a cutoff other than 0.5. Let's see which cutoff gives
@@ -221,7 +224,7 @@ default_test <- default_test %>%
 
 # Let's look at some results
 default_test %>% 
-  select(contacted_prob, sr_12a_actions_contacted_officials_binary) %>% 
+  dplyr::select(contacted_prob, sr_12a_actions_contacted_officials_binary) %>% 
   slice_sample(n=10) %>% 
   arrange(contacted_prob)
 
@@ -239,6 +242,9 @@ table("actual"=default_test$contacted,"estimated"=default_test$contacted_est)
 # Accuracy is
 111/(111+15) # pretty legit
 
+95+12
+107/(107+19)
+
 kappa(default_test$contacted,default_test$contacted_est)
 # 0.52 Kappa. Also not bad.
 
@@ -249,75 +255,77 @@ default_test <- default_test %>%
                                          probs=0:5/5),
                          include.lowest=T))
 
+png("Thesis_liftchart.png") # starts writing a png to file
 default_test %>% 
-  group_by(prob_tier) %>% 
-  summarize(frac_contacted = mean(contacted)) %>% 
-  ggplot(aes(x=prob_tier,y=frac_contacted)) +
+  dplyr::group_by(prob_tier) %>% 
+  dplyr::summarize(frac_contacted = mean(contacted)) %>%
+  ggplot(aes(x=prob_tier, y=frac_contacted)) +
   geom_col() + 
   theme_minimal() + 
-  labs(x="Probability Slice",y="Fraction in Tier Contacting") + 
+  labs(x="\nProbability Tier\n",y="\nFraction in Tier Contacting\n") + 
   scale_y_continuous(label=scales::percent_format())
-
-
+dev.off()
 
 # end of eval stuff for JC
+
+# probabilities by tier
+default_test %>% 
+  dplyr::group_by(prob_tier) %>% 
+  dplyr::summarize(frac_contacted = mean(contacted))
+
 ### Validation tests  ####
 # the kappa statistic is a measure of how closely the instances classified by the machine learning classifier matched the data labeled as ground truth, controlling for the accuracy of a random classifier as measured by the expected accuracy
 library(blorr)
-blr_confusion_matrix(logit_final_aic)
-blr_confusion_matrix(logit_final_test)
-
-
-blr_model_fit_stats(logit_final_aic)
+blr_model_fit_stats(logit_final)
 
 # Variable inflation factors (rule of thumb: under 5 shows no worrisome collinearity)
-vif(logit_final_aic)
+vif(logit_final)
 
 library(lmtest)
-lrtest(logit_final_aic, logit_final) #not sig different than saturated model, all else being equal -- go with simpler model
-lrtest(logit_final_aic) #sig diff from null model, which is good
+# lrtest(logit_final_aic, logit_final) #not sig different than saturated model, all else being equal -- go with simpler model
+lrtest(logit_final) #sig diff from null model, which is good
 
 #Hosmer-Lemeshow GOF test --> sensitive to group number, not good for binary predictors
 #https://stats.stackexchange.com/questions/186219/how-many-groups-to-use-in-hosmer-and-lemeshow-test
 # no sig values --> safe to say that there is no evidence of poor model fit
 library(ResourceSelection)
 for (i in 4:15) {
-  print(hoslem.test(default_train$sr_12a_actions_contacted_officials_binary, fitted(logit_final_aic), g=i) $p.value)
+  print(hoslem.test(default_train$sr_12a_actions_contacted_officials_binary, fitted(logit_final), g=i) $p.value)
 } 
 
 # Via Cook's Distance - no evidence of influential points 
-plot(logit_final_aic)
+plot(logit_final)
 
 ### Visualizing model #### 
 # JC - should I be visualizing this using the training or testing model? My feeling is visualize using the training model, 
 # and only use the testing model to talk about accuracy score via cross-validation. Correct?
 
 # Exponentiated coefficients - showing in terms of odds ratios, not log odds
-library(broom)
-m1_log_preds = tidy(logit_final_aic, conf.int = T, exponentiate = T) %>%
-mutate(Model = "Past contact")
-m1_log_predstest <- subset(m1_log_preds, term !="(Intercept)") #& p.value < 0.05)  # remove intercept
-m1_log_predstest <- m1_log_predstest %>%
-  mutate(term = c("CIM benefits", "Descriptive norms", "Perceived risk", "Efficacy: able to call", "Human ingenuity", "CC personal harm",  "CC harm future generations", "Injunctive norms"))
-write.csv(m1_log_predstest,"/Users/natebender/Desktop/repo//RCthesisanalysis/output_tables/thesis_EXPpastactionregmodel.csv", row.names = TRUE)
-
-
-# Plot
-#pdf("ThesisPastaction_oddsratio_plot.pdf") # starts writing a PDF to file
-# png("ThesisPastaction_oddsratio_plot.png") # starts writing a PDF to file
-zp1 <- ggplot(m1_log_predstest, aes(colour = Model))
-zp1 <- zp1 + geom_hline(yintercept = 1, colour = gray(1/2), lty = 2)
-zp1 <- zp1 + geom_linerange(aes(x = term, ymin = conf.low,
-                                ymax = conf.high),
-                            lwd = 1, position = position_dodge(width = 1/2))
-zp1 <- zp1 + geom_pointrange(aes(x = term, y = estimate, ymin = conf.low,
-                                 ymax = conf.high),
-                             lwd = 1/2, position = position_dodge(width = 1/2),
-                             shape = 21, fill = "WHITE")
-zp1 <- zp1 + coord_flip() + theme_bw()
-INTzp1_log <- zp1 + ggtitle("What influences past representative contact?") + ylab("Odds Ratio") + xlab("Variable")
-print(INTzp1_log)  # The trick to these is position_dodge().
-dev.off()
+# library(broom)
+# m1_log_preds = tidy(logit_final, conf.int = T, exponentiate = T) %>%
+# mutate(Model = "Past contact")
+# m1_log_predstest <- subset(m1_log_preds, term !="(Intercept)") #& p.value < 0.05)  # remove intercept
+# m1_log_predstest <- m1_log_predstest %>%
+#   mutate(term = c("CIM benefits", "Descriptive norms", "Perceived risk", "Efficacy: able to call", "Human ingenuity", "CC personal harm",  "CC harm future generations", "Injunctive norms"))
+# write.csv(m1_log_predstest,"/Users/natebender/Desktop/repo//RCthesisanalysis/output_tables/thesis_EXPpastactionregmodel.csv", row.names = TRUE)
+# 
+# 
+# # Plot
+# #pdf("ThesisPastaction_oddsratio_plot.pdf") # starts writing a PDF to file
+# # png("ThesisPastaction_oddsratio_plot.png") # starts writing a PDF to file
+# zp1 <- ggplot(m1_log_predstest, aes(colour = Model))
+# zp1 <- zp1 + geom_hline(yintercept = 1, colour = gray(1/2), lty = 2)
+# zp1 <- zp1 + geom_linerange(aes(x = term, ymin = conf.low,
+#                                 ymax = conf.high),
+#                             lwd = 1, position = position_dodge(width = 1/2))
+# zp1 <- zp1 + geom_pointrange(aes(x = term, y = estimate, ymin = conf.low,
+#                                  ymax = conf.high),
+#                              lwd = 1/2, position = position_dodge(width = 1/2),
+#                              shape = 21, fill = "WHITE")
+# zp1 <- zp1 + coord_flip() + theme_bw()
+# INTzp1_log <- zp1 + ggtitle("What influences past representative contact?") + ylab("Odds Ratio") + xlab("Variable")
+# print(INTzp1_log)  # The trick to these is position_dodge().
+# dev.off()
 
 
 # Cluster analysis ####
@@ -331,7 +339,8 @@ evs_forclustering <- regression_clean %>%
          sr_41c_ingenuity,
          sr_10_harm_you_personally_reversed,
          sr_11_harm_future_generations_reversed,
-         injunctcontactnorms_all_comp)
+         injunctcontactnorms_all_comp,
+         age_true)
 
 # Standardize variables
 scaled_clean <- scale(evs_forclustering)
@@ -383,32 +392,75 @@ df3_clus_avg <- regression_clean %>%
   group_by(cluster) %>%
   summarize_if(is.numeric, mean)
 
+
 testtable <- df3_clus_avg %>% 
   dplyr::select(cimbenefits_comp,
                 desccontactnorms_all_comp,
+                age_true,
                 cimperceivedrisk_comp,
                 sr_31_able_to_call,
                 sr_41c_ingenuity,
                 sr_10_harm_you_personally_reversed,
                 sr_11_harm_future_generations_reversed,
-                injunctcontactnorms_all_comp)
+                injunctcontactnorms_all_comp,
+                cluster,
+                respondent_id) %>% 
+  setNames(c("Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
+             "Age", "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
+             "Personal Harm", "Future Generations Harm", "Injunctive Norms", "Cluster", "respondent_id"))
 write.csv(testtable,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters.csv", row.names = TRUE)
-
 
 # Final EV list and indices
 # 6"CIM benefits", 8"Descriptive contact norms", , 11"Perceived risk", 22 (but for some reason it's 21 below)"Efficacy: able to call", 12"CC personal harm",  13"CC harm future generations" 24"sr_41c_ingenuity "injunctcontactnorms_all_comp
 
-p <- ggparcoord(
-  data = df3_clus_avg, 
-  columns = c(6, 8, 10, 11, 12, 13, 21, 24), # If I could find a way to call these by name instead of index that would be great
-  groupColumn = "cluster", 
-  scale = "std", # univariately, subtract mean and divide by standard deviation
-  order = c(24, 8, 6, 10, 21, 11, 13, 12)) + 
-  labs(x = "Predictive variables", 
-       y = "Mean value", 
-       title = "Mean predictive variable scores by cluster") +
-  theme(axis.text.x=element_text(angle=7, hjust=1))
-ggplotly(p)
+library(data.table)
+setDT(testtable)
+
+forplot <- testtable %>% 
+  dplyr::select(-Age)
+
+forplot_long <- melt(data = forplot,
+                     id.vars = c("Cluster", "respondent_id"),
+                     variable.name = "variable",
+                     value.name = "mean_value")
+  
+library("ggsci")
+p <- forplot_long %>%
+  ggplot(aes(x=fct_reorder(variable, mean_value, .desc=T), y=mean_value, shape=Cluster, color=Cluster)) +
+  geom_point(size=5) +
+  theme_minimal(base_size = 15)+
+  theme(axis.text.x = element_text(angle=12, hjust=1, size=15),
+        legend.key.size = unit(1.0, "cm"),
+        legend.key = element_rect(color = NA, fill = NA),
+        legend.title.align = 0.5) +
+  scale_color_npg() +
+  labs(x="\nVariable\n", y="\nMean Value\n")
+p
+
+forplotage <- testtable %>% 
+  dplyr::select(Age, Cluster, respondent_id)
+forplotage_long <- melt(data = forplotage,
+                     id.vars = c("Cluster", "respondent_id"),
+                     variable.name = "variable",
+                     value.name = "mean_value")
+
+age_plot <- forplotage_long %>%
+  ggplot(aes(x=fct_reorder(variable, mean_value, .desc=T), y=mean_value, shape=Cluster, color=Cluster)) +
+  geom_point(size=5) +
+  theme_minimal(base_size = 15)+
+  theme(legend.key.size = unit(1.0, "cm"),
+        legend.key = element_rect(color = NA, fill = NA),
+        legend.title.align = 0.5) +
+  scale_color_npg() +
+  labs(x="\nVariable\n", y="\nMean Value\n")
+age_plot
+
+# library(ggpubr)
+# ggarrange(p, age_plot,
+#           labels = c("A", "B"),
+#           align = "h",
+#           common.legend = T, 
+#           legend = "right")
 
 # Visualize clusters by raw numbers of responses
 plot_1 <- c(6, 8, 10, 11)
@@ -436,6 +488,34 @@ regression_clean %>%
 
 ### Descriptive stats on clusters ####
 
+# number of respondents in each cluster
+counts <- regression_clean %>% 
+  group_by(cluster) %>% 
+  summarize(n = n(),
+            actual_contacted = sum(sr_12a_actions_contacted_officials_binary))
+
+counts <- counts %>% 
+  left_join(df3_clus_avg,by="cluster")
+
+counts <- counts %>% 
+  dplyr::select(cluster,
+                n,
+                actual_contacted,
+                age_true,
+                cimperceivedrisk_comp,
+                sr_11_harm_future_generations_reversed,
+                sr_41c_ingenuity,
+                sr_31_able_to_call,
+                sr_10_harm_you_personally_reversed,
+                cimbenefits_comp,
+                injunctcontactnorms_all_comp,
+                desccontactnorms_all_comp) %>% 
+  setNames(c("Cluster", "n", "Actual Contacted","Age","Perceived Risk","Future Generations Harm","Worldview: Ingenuity",
+             "PBC: Calling Ability","Personal Harm","Interpersonal Discussion \n& Media Exposure",
+             "Injunctive Norms","Descriptive Norms")) 
+
+write.csv(counts, "/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters.csv", row.names = TRUE)
+
 df3_clus_avg  # for means of continuous data grouped by cluster
 
 library(purrr)
@@ -447,5 +527,4 @@ regression_clean %>%  # for categorical vars desc stats. List is in-progress, ju
   ) %>% 
   split(regression_clean$cluster) %>% 
   map(summary)
-
 
