@@ -75,7 +75,66 @@ data_for_regression <- regression_clean %>%
          sr_41e_govt_do_more,
          sr_41f_equity)
 
+n.runs <- 100
 set.seed(19881)
+
+if(exists("results")){
+  rm(results)
+}
+
+for(i in 1:n.runs){
+  # ensures even split on response variable. 
+  default_idx <- caret::createDataPartition(as.factor(data_for_regression$sr_12a_actions_contacted_officials_binary), p = 0.75, list = FALSE)
+  default_train <- data_for_regression[default_idx, ]
+  default_test <- data_for_regression[-default_idx, ]
+  
+  logit_contacted <- glm(sr_12a_actions_contacted_officials_binary ~
+                           age_true + race_white_dumvar + gender_dumvar + children_dumvar +
+                           sr_75_religion_dumvar + sr_56_marital_status + sr_61_education +
+                           sr_71_employment_status + sr_72_income +
+                           sr_79_political_leaning + sr_7_believe_about_climate_change +
+                           descdynamicnorms_comp + desccontactnorms_all_comp +
+                           descrolemodelnorms_all_comp + injunctcontactnorms_all_comp +
+                           injunctmotivation_all_comp + cimbenefits_comp +
+                           cimperceivedrisk_comp + sr_10_harm_you_personally_reversed +
+                           sr_11_harm_future_generations_reversed +
+                           sr_21a_effective_actions_contacting_officials +
+                           efficacy_effectiveness_all_comp + efficacy_competresp_all_comp +
+                           behatt_admirablegood_comp + behatt_usefulpleasantsensible_comp +
+                           behatt_coolexcitingeasy_comp +
+                           sr_30_easy_to_call + sr_31_able_to_call + sr_41a_right_to_modify +
+                           sr_41b_laws_of_nature + sr_41c_ingenuity + sr_41d_impotent +
+                           sr_41e_govt_do_more + sr_41f_equity, 
+                         data = default_train, 
+                         family=binomial)
+  
+  
+  logit_contacted_aic <- stepAIC(logit_contacted, direction="backward")
+  
+  if (i == 1) {
+    results <- tidy(logit_contacted_aic) %>% 
+      mutate(simulation=i)
+    
+  } else {
+    results <- results %>% 
+      bind_rows(tidy(logit_contacted_aic) %>% 
+                  mutate(simulation=i))
+    
+  }
+}
+
+df <- results %>% 
+  dplyr::group_by(term) %>% 
+  dplyr::summarize(n = n(),
+                   mean_est = mean(estimate),
+                   min_est = min(estimate),
+                   max_est = max(estimate),
+                   mean_sd = mean(std.error)) %>% 
+  mutate(fraction_of_models = n/n.runs) %>%
+  arrange(desc(n))
+
+# print(df, n = Inf)
+# write.csv(df,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/ThesisPastactionregmodel_simulations.csv", row.names = TRUE)
 
 # JC: stick with "<-" for assignment in R
 default_idx <- caret::createDataPartition(as.factor(data_for_regression$sr_12a_actions_contacted_officials_binary), p = 0.75, list = FALSE)
@@ -130,14 +189,14 @@ logit_final_results <- logit_final_results %>%
   mutate(term = fct_reorder(term,estimate),
          pretty_term = fct_reorder(pretty_term,estimate))
 
-ggplot(logit_final_results %>% 
-         filter(term != "(Intercept)"),
-       aes(x=exp_est,y=term)) + 
-  geom_vline(xintercept = 1,color="gray80") + 
-  geom_point() + 
-  theme_minimal() + 
-  labs(x="Odds Multiplier",y="") + 
-  geom_errorbarh(aes(y=term,xmin=lb,xmax=ub),height=0.1) 
+# ggplot(logit_final_results %>% 
+#          filter(term != "(Intercept)"),
+#        aes(x=exp_est,y=term)) + 
+#   geom_vline(xintercept = 1,color="gray80") + 
+#   geom_point() + 
+#   theme_minimal() + 
+#   labs(x="Odds Multiplier",y="") + 
+#   geom_errorbarh(aes(y=term,xmin=lb,xmax=ub),height=0.1) 
 
 # Example that won't really work till you fill in the names
 png("Thesis_oddsratio_chart.png") # starts writing a png to file
@@ -146,8 +205,8 @@ ggplot(logit_final_results %>%
        aes(x=exp_est,y=pretty_term)) + 
   geom_vline(xintercept = 1,color="gray80") + 
   geom_point() + 
-  theme_minimal() + 
-  labs(x="Odds Multiplier",y="") + 
+  theme_minimal(base_size = 15) + 
+  labs(x="\nOdds Multiplier",y="") + 
   geom_errorbarh(aes(y=pretty_term,xmin=lb,xmax=ub),height=0.1) 
 dev.off()
 
@@ -261,12 +320,59 @@ default_test %>%
   dplyr::summarize(frac_contacted = mean(contacted)) %>%
   ggplot(aes(x=prob_tier, y=frac_contacted)) +
   geom_col() + 
-  theme_minimal() + 
-  labs(x="\nProbability Tier\n",y="\nFraction in Tier Contacting\n") + 
+  geom_text(aes(label = scales::percent(frac_contacted)), vjust = -0.5) +
+  theme_minimal(base_size = 15) + 
+  labs(x="\nProbability Tier by Quintile\n",y="\nFraction in Tier Contacting\n") + 
+  scale_x_discrete(labels=c("[0.000157,0.00928]" = "1", "(0.00928,0.0246]" = "2", "(0.0246,0.0663]" = "3", "(0.0663,0.324]" = "4", "(0.324,0.951]" = "5"))
   scale_y_continuous(label=scales::percent_format())
 dev.off()
 
 # end of eval stuff for JC
+
+# Showing fraction of models plot that each variable appeared in in order to defend simulations approach / cutoff
+prettynames_full <- tibble(
+  term = c("(Intercept)","cimbenefits_comp","desccontactnorms_all_comp",
+           "age_true","cimperceivedrisk_comp",
+           "sr_41c_ingenuity","sr_31_able_to_call", "sr_10_harm_you_personally_reversed",
+           "sr_11_harm_future_generations_reversed",
+           "injunctcontactnorms_all_comp", "behatt_usefulpleasantsensible_comp", 
+           "sr_71_employment_statusretired", "sr_71_employment_statusother", 
+           "children_dumvarnochildren", "behatt_coolexcitingeasy_comp", "sr_41a_right_to_modify",
+           "behatt_admirablegood_comp", "descdynamicnorms_comp", "efficacy_competresp_all_comp",
+           "sr_79_political_leaningmoderate", "sr_79_political_leaningconservative",
+           "sr_72_incomeover150k", "sr_72_income100_150k", "sr_41e_govt_do_more", "sr_41b_laws_of_nature",
+           "sr_21a_effective_actions_contacting_officials", "race_white_dumvarrace_other",
+           "injunctmotivation_all_comp", "sr_61_educationgraduatedeg", "sr_61_educationbachelordeg",
+           "efficacy_effectiveness_all_comp", "descrolemodelnorms_all_comp", "sr_41f_equity", "sr_41d_impotent",
+           "sr_75_religion_dumvarnotreligious", "sr_56_marital_statussingle", 
+           "sr_56_marital_statusdivorce_widow", "sr_30_easy_to_call", "gender_dumvarfemale"), 
+  pretty_term = c("Intercept","Interpersonal Discussion & Media Exposure","Descriptive Norms",
+                  "Age", "Perceived Risk", "Worldview: Ingenuity","PBC: Calling Ability", 
+                  "Personal Harm", "Future Generations Harm", "Injunctive Norms",
+                  "Behavioral Attitude: Useful/Pleasant/Sensible", "Employment: Retired",
+                  "Employment: Other", "Children: None", "Behavioral Attitude: Cool/Exciting/Easy",
+                  "Worldview: Right to Modify", "Behavioral Attitude: Admirable/Good",
+                  "Dynamic Descriptive Norms", "Group Efficacy: Inst. Competency/Responsiveness",
+                  "Ideology: Moderate", "Ideology: Conservative", "Income: 150k+","Income: 100-150k",
+                  "Worldview: Gov Should Do More For People", "Worldview: Subject to Laws of Nature",
+                  "Contacting Officials is Effective Climate Action", "Race: Other", 
+                  "Injunctive Norms: Motivation to Comply", "Education: Graduate Degree", "Education: Bachelor Degree",
+                  "Group Efficacy: Institutional Effectiveness", "Descriptive Norms: Role Models",
+                  "Worldview: Need More Equity", "Worldview: Impotent", "Not Religious", "Marital: Single",
+                  "Marital: Divorced/Widow", "PBC: Easy to Call", "Gender: Female"),
+  paste(1:39)
+)
+
+
+
+df <- df %>% 
+  left_join(prettynames_full,by="term")
+
+ggplot(df, aes(x=fraction_of_models, y=reorder(pretty_term, fraction_of_models))) +
+  geom_point() +
+  theme_minimal(base_size = 15) +
+  scale_x_continuous(labels = scales::percent) +
+  labs(x="\nFraction of Models That Include Variable", y="Variable\n")
 
 # probabilities by tier
 default_test %>% 
@@ -380,6 +486,12 @@ kmean_3$centers
 kmean_3
 autoplot(kmean_3, scaled_clean, frame = TRUE)
 
+
+# Silhouette plot
+library(cluster)
+library(factoextra)
+sil <- silhouette(kmean_3$cluster, dist(scaled_clean))
+fviz_silhouette(sil)
 
 ### Visualizing clusters ####
 library(GGally)
@@ -519,7 +631,7 @@ write.csv(counts, "/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables
 df3_clus_avg  # for means of continuous data grouped by cluster
 
 library(purrr)
-regression_clean %>%  # for categorical vars desc stats. List is in-progress, just experimenting at the moment. 
+regression_clean %>%  # for categorical vars desc stats by cluster. List is in-progress, just experimenting at the moment. 
   dplyr::select(
     age_true,
     sr_72_income,
@@ -528,3 +640,13 @@ regression_clean %>%  # for categorical vars desc stats. List is in-progress, ju
   split(regression_clean$cluster) %>% 
   map(summary)
 
+
+regression_clean %>%  # for categorical vars desc stats by cluster. List is in-progress, just experimenting at the moment. 
+  dplyr::select(
+    age_true,
+    gender_dumvar,
+    children_dumvar,
+    sr_72_income,
+    sr_71_employment_status
+  ) %>% 
+  map(summary)
