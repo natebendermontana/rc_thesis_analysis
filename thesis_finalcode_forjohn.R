@@ -12,7 +12,7 @@ library(dplyr)
 #regression_clean <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/cleandata/perenial_complete_for_analysis.csv", header=TRUE, stringsAsFactors = TRUE)
 
 # JC: get on board with readr and here!
-regression_clean <- read_csv(here("cleandata","perenial_complete_for_analysis.csv"))
+regression_clean <- read_csv(here("cleandata","perennial_analysis_Apr22.csv"))
 
 regression_clean <- regression_clean %>% 
   mutate(sr_12a_actions_contacted_officials_binary = 
@@ -133,8 +133,8 @@ df <- results %>%
   mutate(fraction_of_models = n/n.runs) %>%
   arrange(desc(n))
 
-# print(df, n = Inf)
-# write.csv(df,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/ThesisPastactionregmodel_simulations.csv", row.names = TRUE)
+print(df, n = Inf)
+write.csv(df,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/ThesisPastactionregmodel_simulations_Apr22.csv", row.names = TRUE)
 
 # JC: stick with "<-" for assignment in R
 default_idx <- caret::createDataPartition(as.factor(data_for_regression$sr_12a_actions_contacted_officials_binary), p = 0.75, list = FALSE)
@@ -211,7 +211,7 @@ ggplot(logit_final_results %>%
 dev.off()
 
 for_csv <- tidy(logit_final)
-write.csv(for_csv,"/Users/natebender/Desktop/repo//RCthesisanalysis/output_tables/thesis_pastactionregmodel.csv", row.names = TRUE)
+write.csv(for_csv,"/Users/natebender/Desktop/repo//RCthesisanalysis/output_tables/thesis_pastactionregmodel_Apr22.csv", row.names = TRUE)
 
 # JC: Based on some looking below, I think our model will perform better
 # if we pick a cutoff other than 0.5. Let's see which cutoff gives
@@ -299,10 +299,10 @@ default_test <- default_test %>%
 table("actual"=default_test$contacted,"estimated"=default_test$contacted_est)
 
 # Accuracy is
-111/(111+15) # pretty legit
+#111/(111+15) # pretty legit
 
-95+12
-107/(107+19)
+87+12
+99/(99+13)
 
 kappa(default_test$contacted,default_test$contacted_est)
 # 0.52 Kappa. Also not bad.
@@ -323,7 +323,8 @@ default_test %>%
   geom_text(aes(label = scales::percent(frac_contacted)), vjust = -0.5) +
   theme_minimal(base_size = 15) + 
   labs(x="\nProbability Tier by Quintile\n",y="\nFraction in Tier Contacting\n") + 
-  scale_x_discrete(labels=c("[0.000157,0.00928]" = "1", "(0.00928,0.0246]" = "2", "(0.0246,0.0663]" = "3", "(0.0663,0.324]" = "4", "(0.324,0.951]" = "5"))
+  scale_x_discrete(labels=c("[0.00289,0.0126]" = "1", "(0.0126,0.0273]" = "2", 
+  "(0.0273,0.0752]" = "3", "(0.0752,0.27]" = "4", "(0.27,0.91]" = "5")) +
   scale_y_continuous(label=scales::percent_format())
 dev.off()
 
@@ -456,15 +457,15 @@ res <- cor(scaled_clean)
 round(res, 2)
 
 ### Validation tests for number of clusters ####
-# elbow method suggests 2 or 3 clusters.
+# elbow method suggests 3 clusters.
 library(factoextra)
 fviz_nbclust(scaled_clean, kmeans, method = "wss") +
   geom_vline(xintercept = 3, linetype = 2)
 
-# Average silhouette method - suggests 3
+# Average silhouette method - suggests 2
 fviz_nbclust(scaled_clean, kmeans, method = "silhouette")
 
-# Gap statistic - suggests 12 clusters - need to figure out why this is suggesting wildly higher # of clusters than other validation tests. 
+# Gap statistic - suggests 3 clusters
 # nstart option attempts multiple initial configurations and reports on the best one. 
 # For example, adding nstart=25 will generate 25 initial random centroids and choose the best one for the algorithm.
 # kmax sets upper limit of clusters to test against
@@ -480,7 +481,7 @@ nb <- NbClust(scaled_clean, distance = "euclidean", min.nc = 2,
               max.nc = 10, method = "kmeans")
 fviz_nbclust(nb)
 
-# Based on these tests, going with 3 clusters for now. # 
+# Based on these tests, going with 3 clusters
 kmean_3 <- kmeans(scaled_clean, 3)
 kmean_3$centers
 kmean_3
@@ -498,7 +499,7 @@ library(GGally)
 library(plotly)
 
 # Group cluster results by mean for each variable in regression_clean dataframe
-regression_clean$cluster <- as.factor(kmean_3$cluster)
+regression_clean$cluster <- as.factor(kmean_3$cluster)  # add cluster values back into dataframe
 
 df3_clus_avg <- regression_clean %>%
   group_by(cluster) %>%
@@ -520,7 +521,7 @@ testtable <- df3_clus_avg %>%
   setNames(c("Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
              "Age", "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
              "Personal Harm", "Future Generations Harm", "Injunctive Norms", "Cluster", "respondent_id"))
-write.csv(testtable,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters.csv", row.names = TRUE)
+write.csv(testtable,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters_Apr22.csv", row.names = TRUE)
 
 # Final EV list and indices
 # 6"CIM benefits", 8"Descriptive contact norms", , 11"Perceived risk", 22 (but for some reason it's 21 below)"Efficacy: able to call", 12"CC personal harm",  13"CC harm future generations" 24"sr_41c_ingenuity "injunctcontactnorms_all_comp
@@ -537,6 +538,7 @@ forplot_long <- melt(data = forplot,
                      value.name = "mean_value")
   
 library("ggsci")
+# Plot segmentation variables means by cluster
 p <- forplot_long %>%
   ggplot(aes(x=fct_reorder(variable, mean_value, .desc=T), y=mean_value, shape=Cluster, color=Cluster)) +
   geom_point(size=5) +
@@ -549,6 +551,7 @@ p <- forplot_long %>%
   labs(x="\nVariable\n", y="\nMean Value\n")
 p
 
+# Plot age mean by cluster (separated from the others b/c it's on a wildly different scale)
 forplotage <- testtable %>% 
   dplyr::select(Age, Cluster, respondent_id)
 forplotage_long <- melt(data = forplotage,
@@ -602,8 +605,8 @@ regression_clean %>%
 
 # number of respondents in each cluster
 counts <- regression_clean %>% 
-  group_by(cluster) %>% 
-  summarize(n = n(),
+  dplyr::group_by(cluster) %>% 
+  dplyr::summarize(n = n(),
             actual_contacted = sum(sr_12a_actions_contacted_officials_binary))
 
 counts <- counts %>% 
@@ -626,22 +629,11 @@ counts <- counts %>%
              "PBC: Calling Ability","Personal Harm","Interpersonal Discussion \n& Media Exposure",
              "Injunctive Norms","Descriptive Norms")) 
 
-write.csv(counts, "/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters.csv", row.names = TRUE)
+write.csv(counts, "/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters_Apr22.csv", row.names = TRUE)
 
 df3_clus_avg  # for means of continuous data grouped by cluster
 
-library(purrr)
-regression_clean %>%  # for categorical vars desc stats by cluster. List is in-progress, just experimenting at the moment. 
-  dplyr::select(
-    age_true,
-    sr_72_income,
-    sr_71_employment_status
-  ) %>% 
-  split(regression_clean$cluster) %>% 
-  map(summary)
-
-
-regression_clean %>%  # for categorical vars desc stats by cluster. List is in-progress, just experimenting at the moment. 
+regression_clean %>%  # for OVERALL categorical vars desc stats List is in-progress, just experimenting at the moment. 
   dplyr::select(
     age_true,
     gender_dumvar,
@@ -650,3 +642,23 @@ regression_clean %>%  # for categorical vars desc stats by cluster. List is in-p
     sr_71_employment_status
   ) %>% 
   map(summary)
+
+
+library(purrr)
+regression_clean %>%  # for categorical vars desc stats by cluster. List is in-progress, just experimenting at the moment. 
+  dplyr::select(
+    age_true,
+    race_white_dumvar,
+    gender_dumvar,
+    children_dumvar,
+    sr_75_religion_dumvar,
+    sr_56_marital_status,
+    sr_61_education,
+    sr_71_employment_status,
+    sr_72_income,
+    sr_79_political_leaning,
+  ) %>% 
+  split(regression_clean$cluster) %>% 
+  map(summary)
+
+
