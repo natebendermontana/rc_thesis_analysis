@@ -447,7 +447,8 @@ evs_forclustering <- regression_clean %>%
          sr_10_harm_you_personally_reversed,
          sr_11_harm_future_generations_reversed,
          injunctcontactnorms_all_comp,
-         age_true)
+         age_true
+         )
 
 # Standardize variables
 scaled_clean <- scale(evs_forclustering)
@@ -501,12 +502,33 @@ library(plotly)
 # Group cluster results by mean for each variable in regression_clean dataframe
 regression_clean$cluster <- as.factor(kmean_3$cluster)  # add cluster values back into dataframe
 
+# creating dataframe of segmentation variable means but only for actual ppl who contacted. 
+actual_contact <- regression_clean %>%  # Desc stats on the total actual ppl who contacted, not grouped by cluster
+  dplyr::select(
+    cimbenefits_comp,
+    desccontactnorms_all_comp,
+    cimperceivedrisk_comp,
+    sr_31_able_to_call,
+    sr_41c_ingenuity,
+    sr_10_harm_you_personally_reversed,
+    sr_11_harm_future_generations_reversed,
+    injunctcontactnorms_all_comp,
+    sr_12a_actions_contacted_officials_binary) %>%
+  filter(sr_12a_actions_contacted_officials_binary==1) %>%
+  summarize_if(is.numeric, mean) %>% 
+  mutate(Cluster = as.factor(c(0))) %>% 
+  select(-sr_12a_actions_contacted_officials_binary) %>% 
+  setNames(c("Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
+             "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
+             "Personal Harm", "Future Generations Harm", "Injunctive Norms", "Cluster"))
+  
+
 df3_clus_avg <- regression_clean %>%
   group_by(cluster) %>%
   summarize_if(is.numeric, mean)
 
 
-testtable <- df3_clus_avg %>% 
+cluster_means <- df3_clus_avg %>% 
   dplyr::select(cimbenefits_comp,
                 desccontactnorms_all_comp,
                 age_true,
@@ -521,25 +543,38 @@ testtable <- df3_clus_avg %>%
   setNames(c("Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
              "Age", "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
              "Personal Harm", "Future Generations Harm", "Injunctive Norms", "Cluster", "respondent_id"))
-write.csv(testtable,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters_Apr22.csv", row.names = TRUE)
+#write.csv(testtable,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters_Apr22.csv", row.names = TRUE)
 
 # Final EV list and indices
 # 6"CIM benefits", 8"Descriptive contact norms", , 11"Perceived risk", 22 (but for some reason it's 21 below)"Efficacy: able to call", 12"CC personal harm",  13"CC harm future generations" 24"sr_41c_ingenuity "injunctcontactnorms_all_comp
 
 library(data.table)
-setDT(testtable)
 
-forplot <- testtable %>% 
-  dplyr::select(-Age)
+meanscores_all <- bind_rows(cluster_means, actual_contact)
+setDT(meanscores_all)
+setDT(cluster_means)
+
+forplot <- cluster_means %>% 
+  dplyr::select(-Age,
+                -respondent_id) 
 
 forplot_long <- melt(data = forplot,
-                     id.vars = c("Cluster", "respondent_id"),
+                     id.vars = c("Cluster"),# "respondent_id"),
                      variable.name = "variable",
                      value.name = "mean_value")
   
+forplot_all <- meanscores_all %>% 
+  dplyr::select(-Age,
+                -respondent_id)
+
+forplot_all_long <- melt(data = forplot_all,
+                     id.vars = c("Cluster"),# "respondent_id"),
+                     variable.name = "variable",
+                     value.name = "mean_value")
+
 library("ggsci")
 # Plot segmentation variables means by cluster
-p <- forplot_long %>%
+p <- forplot_all_long %>%
   ggplot(aes(x=fct_reorder(variable, mean_value, .desc=T), y=mean_value, shape=Cluster, color=Cluster)) +
   geom_point(size=5) +
   theme_minimal(base_size = 15)+
@@ -629,7 +664,7 @@ counts <- counts %>%
              "PBC: Calling Ability","Personal Harm","Interpersonal Discussion \n& Media Exposure",
              "Injunctive Norms","Descriptive Norms")) 
 
-write.csv(counts, "/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters_Apr22.csv", row.names = TRUE)
+#write.csv(counts, "/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters_Apr22.csv", row.names = TRUE)
 
 df3_clus_avg  # for means of continuous data grouped by cluster
 
@@ -662,3 +697,136 @@ regression_clean %>%  # for categorical vars desc stats by cluster. List is in-p
   map(summary)
 
 
+regression_clean %>%  # Desc stats on the total actual ppl who contacted, not grouped by cluster
+  dplyr::select(
+    sr_12a_actions_contacted_officials_binary,
+    age_true,
+    cimperceivedrisk_comp,
+    sr_11_harm_future_generations_reversed,
+    sr_41c_ingenuity,
+    sr_31_able_to_call,
+    sr_10_harm_you_personally_reversed,
+    cimbenefits_comp,
+    injunctcontactnorms_all_comp,
+    desccontactnorms_all_comp,
+    race_white_dumvar,
+    gender_dumvar,
+    children_dumvar,
+    sr_75_religion_dumvar,
+    sr_56_marital_status,
+    sr_61_education,
+    sr_71_employment_status,
+    sr_72_income,
+    sr_79_political_leaning,
+  ) %>%
+  filter(sr_12a_actions_contacted_officials_binary==1) %>% 
+  mutate(n=n()) %>% 
+  map(summary)
+  
+# Experimenting with replacing the whole cluster 2 with just the non-contacters, in order to compare against that cluster sub-group against the actual contacters
+########
+#########
+#########
+#########
+#########
+#########
+#########
+#########
+
+# Grabbing just the non-contacters in cluster 2
+cluster2_noncontact <- regression_clean %>%  
+  dplyr::select(
+    sr_12a_actions_contacted_officials_binary,
+    age_true,
+    cimperceivedrisk_comp,
+    sr_11_harm_future_generations_reversed,
+    sr_41c_ingenuity,
+    sr_31_able_to_call,
+    sr_10_harm_you_personally_reversed,
+    cimbenefits_comp,
+    injunctcontactnorms_all_comp,
+    desccontactnorms_all_comp,
+    race_white_dumvar,
+    gender_dumvar,
+    children_dumvar,
+    sr_75_religion_dumvar,
+    sr_56_marital_status,
+    sr_61_education,
+    sr_71_employment_status,
+    sr_72_income,
+    sr_79_political_leaning,
+    cluster
+  ) %>%
+  filter(cluster==2 & sr_12a_actions_contacted_officials_binary==0) %>%
+  summarize_if(is.numeric, mean) %>% 
+
+
+cluster2_noncontact <- cluster2_noncontact %>%  # Desc stats on the total actual ppl who contacted, not grouped by cluster
+  dplyr::select(
+    cimbenefits_comp,
+    desccontactnorms_all_comp,
+    cimperceivedrisk_comp,
+    sr_31_able_to_call,
+    sr_41c_ingenuity,
+    sr_10_harm_you_personally_reversed,
+    sr_11_harm_future_generations_reversed,
+    injunctcontactnorms_all_comp,
+    sr_12a_actions_contacted_officials_binary) %>%
+  summarize_if(is.numeric, mean) %>% 
+  mutate(Cluster = as.factor(c(20))) %>% 
+  select(-sr_12a_actions_contacted_officials_binary) %>% 
+  setNames(c("Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
+             "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
+             "Personal Harm", "Future Generations Harm", "Injunctive Norms", "Cluster"))
+
+df3_clus_avg <- regression_clean %>%
+  group_by(cluster) %>%
+  summarize_if(is.numeric, mean)
+
+
+cluster_means <- df3_clus_avg %>% 
+  dplyr::select(cimbenefits_comp,
+                desccontactnorms_all_comp,
+                age_true,
+                cimperceivedrisk_comp,
+                sr_31_able_to_call,
+                sr_41c_ingenuity,
+                sr_10_harm_you_personally_reversed,
+                sr_11_harm_future_generations_reversed,
+                injunctcontactnorms_all_comp,
+                cluster,
+                respondent_id) %>% 
+  setNames(c("Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
+             "Age", "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
+             "Personal Harm", "Future Generations Harm", "Injunctive Norms", "Cluster", "respondent_id"))
+
+meanscores_all <- bind_rows(cluster_means, cluster2_noncontact, actual_contact)
+setDT(meanscores_all)
+
+forplot_all <- meanscores_all %>% 
+  dplyr::select(-Age,
+                -respondent_id)
+
+forplot_all_long <- melt(data = forplot_all,
+                         id.vars = c("Cluster"),# "respondent_id"),
+                         variable.name = "variable",
+                         value.name = "mean_value")
+
+library("ggsci")
+# Plot segmentation variables means by cluster
+p <- forplot_all_long %>%
+  ggplot(aes(x=fct_reorder(variable, mean_value, .desc=T), y=mean_value, shape=Cluster, color=Cluster)) +
+  geom_point(size=5) +
+  theme_minimal(base_size = 15)+
+  theme(axis.text.x = element_text(angle=12, hjust=1, size=15),
+        legend.key.size = unit(1.0, "cm"),
+        legend.key = element_rect(color = NA, fill = NA),
+        legend.title.align = 0.5) +
+  scale_color_npg(name="Clusters",
+                     labels=c("1: Non Contact LowPBC", "2: All", "3: Non Contact HighPBC", "2: Non Contact", "Actual Contact")) +
+  scale_shape_manual(name="Clusters",
+                     labels=c("1: Non Contact LowPBC", "2: All", "3: Non Contact HighPBC", "2: Non Contact", "Actual Contact"),
+                     values = c(15, 16, 17, 3, 12)) +
+  scale_fill_discrete(labels = c("1: Non Contact LowPBC", "2: All", "3: Non Contact HighPBC", "2: Non Contact", "Actual Contact")) + #Rename the legend title and text labels.
+  labs(x="\nVariable\n", y="\nMean Value\n")
+p 
