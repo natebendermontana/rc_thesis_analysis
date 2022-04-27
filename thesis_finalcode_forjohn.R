@@ -152,7 +152,7 @@ logit_final <- glm(sr_12a_actions_contacted_officials_binary~
                      cimperceivedrisk_comp+
                      sr_31_able_to_call+
                      sr_41c_ingenuity+
-                     sr_10_harm_you_personally_reversed+
+                     behatt_usefulpleasantsensible_comp+
                      sr_11_harm_future_generations_reversed+
                      injunctcontactnorms_all_comp,
                    data=default_train,family=binomial)
@@ -169,12 +169,12 @@ summary(logit_final)  # skipping the final AIC pass
 pretty.names <- tibble(
   term = c("(Intercept)","cimbenefits_comp","desccontactnorms_all_comp",
            "age_true","cimperceivedrisk_comp","sr_31_able_to_call",
-           "sr_41c_ingenuity","sr_10_harm_you_personally_reversed",
+           "sr_41c_ingenuity", "behatt_usefulpleasantsensible_comp",
            "sr_11_harm_future_generations_reversed",
            "injunctcontactnorms_all_comp"), 
   pretty_term = c("Intercept","Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
                   "Age", "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
-                  "Personal Harm", "Future Generations Harm", "Injunctive Norms"),
+                  "Behatt: Useful/Pleasant/Sensible", "Future Generations Harm", "Injunctive Norms"),
   paste(1:10)
 )
 
@@ -299,10 +299,9 @@ default_test <- default_test %>%
 table("actual"=default_test$contacted,"estimated"=default_test$contacted_est)
 
 # Accuracy is
-#111/(111+15) # pretty legit
 
-87+12
-99/(99+13)
+86+12  # accurately predicted
+98/(98+14)  # 87.5% accuracy
 
 kappa(default_test$contacted,default_test$contacted_est)
 # 0.52 Kappa. Also not bad.
@@ -323,8 +322,8 @@ default_test %>%
   geom_text(aes(label = scales::percent(frac_contacted)), vjust = -0.5) +
   theme_minimal(base_size = 15) + 
   labs(x="\nProbability Tier by Quintile\n",y="\nFraction in Tier Contacting\n") + 
-  scale_x_discrete(labels=c("[0.00289,0.0126]" = "1", "(0.0126,0.0273]" = "2", 
-  "(0.0273,0.0752]" = "3", "(0.0752,0.27]" = "4", "(0.27,0.91]" = "5")) +
+  scale_x_discrete(labels=c("[0.00295,0.0134]" = "1", "(0.0134,0.0308]" = "2", 
+  "(0.0308,0.0697]" = "3", "(0.0697,0.234]" = "4", "(0.234,0.919]" = "5")) +
   scale_y_continuous(label=scales::percent_format())
 dev.off()
 
@@ -332,42 +331,52 @@ dev.off()
 
 # Showing fraction of models plot that each variable appeared in in order to defend simulations approach / cutoff
 prettynames_full <- tibble(
-  term = c("(Intercept)","cimbenefits_comp","desccontactnorms_all_comp",
-           "age_true","cimperceivedrisk_comp",
-           "sr_41c_ingenuity","sr_31_able_to_call", "sr_10_harm_you_personally_reversed",
-           "sr_11_harm_future_generations_reversed",
-           "injunctcontactnorms_all_comp", "behatt_usefulpleasantsensible_comp", 
-           "sr_71_employment_statusretired", "sr_71_employment_statusother", 
-           "children_dumvarnochildren", "behatt_coolexcitingeasy_comp", "sr_41a_right_to_modify",
-           "behatt_admirablegood_comp", "descdynamicnorms_comp", "efficacy_competresp_all_comp",
-           "sr_79_political_leaningmoderate", "sr_79_political_leaningconservative",
-           "sr_72_incomeover150k", "sr_72_income100_150k", "sr_41e_govt_do_more", "sr_41b_laws_of_nature",
-           "sr_21a_effective_actions_contacting_officials", "race_white_dumvarrace_other",
-           "injunctmotivation_all_comp", "sr_61_educationgraduatedeg", "sr_61_educationbachelordeg",
-           "efficacy_effectiveness_all_comp", "descrolemodelnorms_all_comp", "sr_41f_equity", "sr_41d_impotent",
-           "sr_75_religion_dumvarnotreligious", "sr_56_marital_statussingle", 
-           "sr_56_marital_statusdivorce_widow", "sr_30_easy_to_call", "gender_dumvarfemale"), 
-  pretty_term = c("Intercept","Interpersonal Discussion & Media Exposure","Descriptive Norms",
-                  "Age", "Perceived Risk", "Worldview: Ingenuity","PBC: Calling Ability", 
-                  "Personal Harm", "Future Generations Harm", "Injunctive Norms",
-                  "Behavioral Attitude: Useful/Pleasant/Sensible", "Employment: Retired",
-                  "Employment: Other", "Children: None", "Behavioral Attitude: Cool/Exciting/Easy",
-                  "Worldview: Right to Modify", "Behavioral Attitude: Admirable/Good",
-                  "Dynamic Descriptive Norms", "Group Efficacy: Inst. Competency/Responsiveness",
-                  "Ideology: Moderate", "Ideology: Conservative", "Income: 150k+","Income: 100-150k",
-                  "Worldview: Gov Should Do More For People", "Worldview: Subject to Laws of Nature",
-                  "Contacting Officials is Effective Climate Action", "Race: Other", 
-                  "Injunctive Norms: Motivation to Comply", "Education: Graduate Degree", "Education: Bachelor Degree",
-                  "Group Efficacy: Institutional Effectiveness", "Descriptive Norms: Role Models",
-                  "Worldview: Need More Equity", "Worldview: Impotent", "Not Religious", "Marital: Single",
-                  "Marital: Divorced/Widow", "PBC: Easy to Call", "Gender: Female"),
-  paste(1:39)
+  term = c("(Intercept)","desccontactnorms_all_comp","cimbenefits_comp",
+           "age_true","cimperceivedrisk_comp", "injunctcontactnorms_all_comp",
+           "sr_41c_ingenuity","behatt_usefulpleasantsensible_comp", "sr_31_able_to_call",
+           "sr_11_harm_future_generations_reversed","behatt_coolexcitingeasy_comp","descdynamicnorms_comp",
+           "behatt_admirablegood_comp","injunctmotivation_all_comp","sr_10_harm_you_personally_reversed",
+           "sr_71_employment_statusother","sr_71_employment_statusretired", "efficacy_competresp_all_comp",
+           "children_dumvarnochildren","sr_30_easy_to_call","sr_41a_right_to_modify",
+           "sr_79_political_leaningconservative","sr_79_political_leaningmoderate",
+           "sr_72_income100_150k","sr_72_incomeover150k","sr_41e_govt_do_more",
+           "sr_41f_equity", "sr_41d_impotent","gender_dumvarfemale",
+           "sr_21a_effective_actions_contacting_officials",
+           "efficacy_effectiveness_all_comp","race_white_dumvarrace_other",
+           "sr_41b_laws_of_nature","descrolemodelnorms_all_comp",
+           "sr_61_educationbachelordeg","sr_61_educationgraduatedeg",
+           "sr_56_marital_statusdivorce_widow","sr_56_marital_statussingle",
+           "sr_75_religion_dumvarnotreligious","sr_7_believe_about_climate_changemost_human",
+           "sr_7_believe_about_climate_changemost_natural","sr_7_believe_about_climate_changenatural_human",
+           "sr_7_believe_about_climate_changenotchanging"
+             ), 
+  pretty_term = c("Intercept","Descriptive Norms","Interpersonal Discussion & Media Exposure",
+                  "Age", "Perceived Risk","Injunctive Norms","Worldview: Ingenuity",
+                  "Behavioral Attitude: Useful/Pleasant/Sensible","PBC: Calling Ability",
+                  "Future Generations Harm","Behavioral Attitude: Cool/Exciting/Easy",
+                  "Dynamic Descriptive Norms","Behavioral Attitude: Admirable/Good",
+                  "Injunctive Norms: Motivation to Comply","Personal Harm",
+                  "Employment: Other","Employment: Retired","Group Efficacy: Inst. Competency/Responsiveness",
+                  "Children: None","PBC: Easy to Call","Worldview: Right to Modify",
+                  "Ideology: Conservative","Ideology: Moderate","Income: 100-150k",
+                  "Income: 150k+","Worldview: Gov Should Do More For People","Worldview: Need More Equity",
+                  "Worldview: Impotent","Gender: Female","Contacting Officials is Effective Climate Action",
+                  "Group Efficacy: Institutional Effectiveness","Race: Other",
+                  "Worldview: Subject to Laws of Nature", "Descriptive Norms: Role Models",
+                  "Education: Bachelor Degree","Education: Graduate Degree",
+                  "Marital: Divorced/Widow","Marital: Single","Not Religious",
+                  "CC Mostly Human Caused", "CC Mostly Natural", "CC Natural & Human",
+                  "CC is Not Changing"
+                    ),
+  paste(1:43)
 )
 
 
 
 df <- df %>% 
   left_join(prettynames_full,by="term")
+write.csv(df,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/ThesisPastactionregmodel_simulations_Apr22.csv", row.names = TRUE)
+
 
 ggplot(df, aes(x=fraction_of_models, y=reorder(pretty_term, fraction_of_models))) +
   geom_point() +
@@ -444,7 +453,7 @@ evs_forclustering <- regression_clean %>%
          cimperceivedrisk_comp,
          sr_31_able_to_call,
          sr_41c_ingenuity,
-         sr_10_harm_you_personally_reversed,
+         behatt_usefulpleasantsensible_comp,
          sr_11_harm_future_generations_reversed,
          injunctcontactnorms_all_comp,
          age_true
@@ -473,7 +482,7 @@ fviz_nbclust(scaled_clean, kmeans, method = "silhouette")
 # B is the number of bootstrapped samples the function uses to test against. The reference dataset is generated using Monte Carlo simulations of the sampling process
 library(cluster)
 gap_stat <- clusGap(scaled_clean, FUN = kmeans, nstart = 10, d.power = 2,
-                    K.max = 20, B = 500)
+                    K.max = 20, B = 300)
 fviz_gap_stat(gap_stat)
 
 # 30 indices method - majority rule recommendation is 3 clusters
@@ -510,7 +519,7 @@ actual_contact <- regression_clean %>%  # Desc stats on the total actual ppl who
     cimperceivedrisk_comp,
     sr_31_able_to_call,
     sr_41c_ingenuity,
-    sr_10_harm_you_personally_reversed,
+    behatt_usefulpleasantsensible_comp,
     sr_11_harm_future_generations_reversed,
     injunctcontactnorms_all_comp,
     sr_12a_actions_contacted_officials_binary) %>%
@@ -520,7 +529,7 @@ actual_contact <- regression_clean %>%  # Desc stats on the total actual ppl who
   select(-sr_12a_actions_contacted_officials_binary) %>% 
   setNames(c("Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
              "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
-             "Personal Harm", "Future Generations Harm", "Injunctive Norms", "Cluster"))
+             "Behatt: Useful/Pleasant/Sensible", "Future Generations Harm", "Injunctive Norms", "Cluster"))
   
 
 df3_clus_avg <- regression_clean %>%
@@ -535,14 +544,14 @@ cluster_means <- df3_clus_avg %>%
                 cimperceivedrisk_comp,
                 sr_31_able_to_call,
                 sr_41c_ingenuity,
-                sr_10_harm_you_personally_reversed,
+                behatt_usefulpleasantsensible_comp,
                 sr_11_harm_future_generations_reversed,
                 injunctcontactnorms_all_comp,
-                cluster,
-                respondent_id) %>% 
+                cluster
+                ) %>% 
   setNames(c("Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
              "Age", "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
-             "Personal Harm", "Future Generations Harm", "Injunctive Norms", "Cluster", "respondent_id"))
+             "Behatt: Useful/Pleasant/Sensible", "Future Generations Harm", "Injunctive Norms", "Cluster"))
 #write.csv(testtable,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters_Apr22.csv", row.names = TRUE)
 
 # Final EV list and indices
@@ -555,8 +564,7 @@ setDT(meanscores_all)
 setDT(cluster_means)
 
 forplot <- cluster_means %>% 
-  dplyr::select(-Age,
-                -respondent_id) 
+  dplyr::select(-Age) 
 
 forplot_long <- melt(data = forplot,
                      id.vars = c("Cluster"),# "respondent_id"),
@@ -574,7 +582,7 @@ forplot_all_long <- melt(data = forplot_all,
 
 library("ggsci")
 # Plot segmentation variables means by cluster
-p <- forplot_all_long %>%
+p <- forplot_long %>%
   ggplot(aes(x=fct_reorder(variable, mean_value, .desc=T), y=mean_value, shape=Cluster, color=Cluster)) +
   geom_point(size=5) +
   theme_minimal(base_size = 15)+
@@ -582,13 +590,19 @@ p <- forplot_all_long %>%
         legend.key.size = unit(1.0, "cm"),
         legend.key = element_rect(color = NA, fill = NA),
         legend.title.align = 0.5) +
-  scale_color_npg() +
+  scale_color_npg(name="Clusters",
+                  labels=c("Inactive", "Likely Social Contact", "Low Norms Contact")) +
+  scale_shape_manual(name="Clusters",
+                     labels=c("Inactive", "Likely Social Contact", "Low Norms Contact"),
+                     values = c(15, 16, 17)) +
+  scale_fill_discrete(labels = c("Inactive", "Likely Social Contact", "Low Norms Contact")) + #Rename the legend title and text labels.
   labs(x="\nVariable\n", y="\nMean Value\n")
 p
 
 # Plot age mean by cluster (separated from the others b/c it's on a wildly different scale)
 forplotage <- testtable %>% 
   dplyr::select(Age, Cluster, respondent_id)
+setDT(forplotage)
 forplotage_long <- melt(data = forplotage,
                      id.vars = c("Cluster", "respondent_id"),
                      variable.name = "variable",
@@ -601,7 +615,12 @@ age_plot <- forplotage_long %>%
   theme(legend.key.size = unit(1.0, "cm"),
         legend.key = element_rect(color = NA, fill = NA),
         legend.title.align = 0.5) +
-  scale_color_npg() +
+  scale_color_npg(name="Clusters",
+                  labels=c("Inactive", "Likely Social Contact", "Low Norms Contact")) +
+  scale_shape_manual(name="Clusters",
+                     labels=c("Inactive", "Likely Social Contact", "Low Norms Contact"),
+                     values = c(15, 16, 17)) +
+  scale_fill_discrete(labels = c("Inactive", "Likely Social Contact", "Low Norms Contact")) + #Rename the legend title and text labels.
   labs(x="\nVariable\n", y="\nMean Value\n")
 age_plot
 
@@ -656,17 +675,16 @@ counts <- counts %>%
                 sr_11_harm_future_generations_reversed,
                 sr_41c_ingenuity,
                 sr_31_able_to_call,
-                sr_10_harm_you_personally_reversed,
+                behatt_usefulpleasantsensible_comp,
                 cimbenefits_comp,
                 injunctcontactnorms_all_comp,
                 desccontactnorms_all_comp) %>% 
   setNames(c("Cluster", "n", "Actual Contacted","Age","Perceived Risk","Future Generations Harm","Worldview: Ingenuity",
-             "PBC: Calling Ability","Personal Harm","Interpersonal Discussion \n& Media Exposure",
+             "PBC: Calling Ability","Behatt: Useful/Pleasant/Sensible","Interpersonal Discussion \n& Media Exposure",
              "Injunctive Norms","Descriptive Norms")) 
 
-#write.csv(counts, "/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters_Apr22.csv", row.names = TRUE)
+write.csv(counts, "/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters_Apr22.csv", row.names = TRUE)
 
-df3_clus_avg  # for means of continuous data grouped by cluster
 
 regression_clean %>%  # for OVERALL categorical vars desc stats List is in-progress, just experimenting at the moment. 
   dplyr::select(
@@ -682,6 +700,7 @@ regression_clean %>%  # for OVERALL categorical vars desc stats List is in-progr
 library(purrr)
 regression_clean %>%  # for categorical vars desc stats by cluster. List is in-progress, just experimenting at the moment. 
   dplyr::select(
+    cluster, 
     age_true,
     race_white_dumvar,
     gender_dumvar,
@@ -693,8 +712,8 @@ regression_clean %>%  # for categorical vars desc stats by cluster. List is in-p
     sr_72_income,
     sr_79_political_leaning,
   ) %>% 
-  split(regression_clean$cluster) %>% 
-  map(summary)
+  filter(cluster==3) %>% 
+  describe()
 
 
 regression_clean %>%  # Desc stats on the total actual ppl who contacted, not grouped by cluster
@@ -734,78 +753,36 @@ regression_clean %>%  # Desc stats on the total actual ppl who contacted, not gr
 #########
 
 # Grabbing just the non-contacters in cluster 2
-cluster2_noncontact <- regression_clean %>%  
+cluster2_noncontact <- regression_clean %>%  # Desc stats on the total actual ppl who contacted, not grouped by cluster
   dplyr::select(
-    sr_12a_actions_contacted_officials_binary,
-    age_true,
-    cimperceivedrisk_comp,
-    sr_11_harm_future_generations_reversed,
-    sr_41c_ingenuity,
-    sr_31_able_to_call,
-    sr_10_harm_you_personally_reversed,
     cimbenefits_comp,
-    injunctcontactnorms_all_comp,
     desccontactnorms_all_comp,
-    race_white_dumvar,
-    gender_dumvar,
-    children_dumvar,
-    sr_75_religion_dumvar,
-    sr_56_marital_status,
-    sr_61_education,
-    sr_71_employment_status,
-    sr_72_income,
-    sr_79_political_leaning,
-    cluster
-  ) %>%
+    cimperceivedrisk_comp,
+    sr_31_able_to_call,
+    sr_41c_ingenuity,
+    behatt_usefulpleasantsensible_comp,
+    sr_11_harm_future_generations_reversed,
+    injunctcontactnorms_all_comp,
+    sr_12a_actions_contacted_officials_binary,
+    cluster) %>% 
   filter(cluster==2 & sr_12a_actions_contacted_officials_binary==0) %>%
   summarize_if(is.numeric, mean) %>% 
-
-
-cluster2_noncontact <- cluster2_noncontact %>%  # Desc stats on the total actual ppl who contacted, not grouped by cluster
-  dplyr::select(
-    cimbenefits_comp,
-    desccontactnorms_all_comp,
-    cimperceivedrisk_comp,
-    sr_31_able_to_call,
-    sr_41c_ingenuity,
-    sr_10_harm_you_personally_reversed,
-    sr_11_harm_future_generations_reversed,
-    injunctcontactnorms_all_comp,
-    sr_12a_actions_contacted_officials_binary) %>%
-  summarize_if(is.numeric, mean) %>% 
-  mutate(Cluster = as.factor(c(20))) %>% 
+  mutate(Cluster = as.factor(c(20))) %>% # 20 is just a placeholder number 
   select(-sr_12a_actions_contacted_officials_binary) %>% 
   setNames(c("Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
              "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
-             "Personal Harm", "Future Generations Harm", "Injunctive Norms", "Cluster"))
+             "Behatt: Useful/Pleasant/Sensible", "Future Generations Harm", "Injunctive Norms", "Cluster"))
 
-df3_clus_avg <- regression_clean %>%
-  group_by(cluster) %>%
-  summarize_if(is.numeric, mean)
+# stripping out clusters 1 and 3 from cluster means just for this plot
+temp <- cluster_means %>% 
+  filter(Cluster==2)
 
 
-cluster_means <- df3_clus_avg %>% 
-  dplyr::select(cimbenefits_comp,
-                desccontactnorms_all_comp,
-                age_true,
-                cimperceivedrisk_comp,
-                sr_31_able_to_call,
-                sr_41c_ingenuity,
-                sr_10_harm_you_personally_reversed,
-                sr_11_harm_future_generations_reversed,
-                injunctcontactnorms_all_comp,
-                cluster,
-                respondent_id) %>% 
-  setNames(c("Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
-             "Age", "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
-             "Personal Harm", "Future Generations Harm", "Injunctive Norms", "Cluster", "respondent_id"))
-
-meanscores_all <- bind_rows(cluster_means, cluster2_noncontact, actual_contact)
+meanscores_all <- bind_rows(temp, cluster2_noncontact, actual_contact)  # cluster_means and actual_contact are created above. 
 setDT(meanscores_all)
 
 forplot_all <- meanscores_all %>% 
-  dplyr::select(-Age,
-                -respondent_id)
+  dplyr::select(-Age)
 
 forplot_all_long <- melt(data = forplot_all,
                          id.vars = c("Cluster"),# "respondent_id"),
@@ -814,7 +791,7 @@ forplot_all_long <- melt(data = forplot_all,
 
 library("ggsci")
 # Plot segmentation variables means by cluster
-p <- forplot_all_long %>%
+p_all <- forplot_all_long %>%
   ggplot(aes(x=fct_reorder(variable, mean_value, .desc=T), y=mean_value, shape=Cluster, color=Cluster)) +
   geom_point(size=5) +
   theme_minimal(base_size = 15)+
@@ -823,10 +800,46 @@ p <- forplot_all_long %>%
         legend.key = element_rect(color = NA, fill = NA),
         legend.title.align = 0.5) +
   scale_color_npg(name="Clusters",
-                     labels=c("1: Non Contact LowPBC", "2: All", "3: Non Contact HighPBC", "2: Non Contact", "Actual Contact")) +
+                     labels=c("Likely Social Contact", "LSC: Non Contact", "Actual Contact")) +
   scale_shape_manual(name="Clusters",
-                     labels=c("1: Non Contact LowPBC", "2: All", "3: Non Contact HighPBC", "2: Non Contact", "Actual Contact"),
-                     values = c(15, 16, 17, 3, 12)) +
-  scale_fill_discrete(labels = c("1: Non Contact LowPBC", "2: All", "3: Non Contact HighPBC", "2: Non Contact", "Actual Contact")) + #Rename the legend title and text labels.
+                     labels=c("Likely Social Contact", "LSC: Non Contact", "Actual Contact"),
+                     values = c(17, 3, 12)) +
+  scale_fill_discrete(labels = c("Likely Social Contact", "LSC: Non Contact", "Actual Contact")) + #Rename the legend title and text labels.
   labs(x="\nVariable\n", y="\nMean Value\n")
-p 
+p_all 
+
+
+
+
+
+
+# Determine if there are any differences between the 453 resp in Regression_Clean and the incomplete resp in original dataset
+#####
+#####
+#####
+regression_clean %>%
+  select(race_white_dumvar,
+                 gender_dumvar,
+                 children_dumvar,
+                 sr_75_religion_dumvar,
+                 sr_56_marital_status,
+                 sr_61_education,
+                 sr_71_employment_status,
+                 sr_72_income,
+                 sr_79_political_leaning) %>% 
+  describe()
+
+nonaccepted <- d_accept %>% 
+  anti_join(regression_clean, by="respondent_id")  # anti-join grabs all of "d_accept" except those resp_ids that match in "regression_clean". So we're looking at only those in d_accept who were not chosen
+nonaccepted %>%
+  select(race_white_dumvar,
+         gender_dumvar,
+         children_dumvar,
+         sr_75_religion_dumvar,
+         sr_56_marital_status,
+         sr_61_education,
+         sr_71_employment_status,
+         sr_72_income,
+         sr_79_political_leaning,
+         sr_12a_actions_contacted_officials) %>% 
+  describe()
