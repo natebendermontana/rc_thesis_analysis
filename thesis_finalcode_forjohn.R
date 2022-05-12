@@ -1,6 +1,5 @@
 # Regression ####
 ### Setup data ####
-library(tidyverse)
 library(ggplot2)
 library(GGally)
 library(ggfortify)
@@ -8,6 +7,8 @@ library(broom)
 library(here)
 library(ModelMetrics) # JC: for "kappa"
 library(dplyr)
+library(tidyverse)
+library(psych)
 
 #regression_clean <- read.csv("/Users/natebender/Desktop/Repo/RCthesisanalysis/cleandata/perenial_complete_for_analysis.csv", header=TRUE, stringsAsFactors = TRUE)
 
@@ -174,7 +175,7 @@ pretty.names <- tibble(
            "injunctcontactnorms_all_comp"), 
   pretty_term = c("Intercept","Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
                   "Age", "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
-                  "Behatt: Useful/Pleasant/Sensible", "Future Generations Harm", "Injunctive Norms"),
+                  "Attitude: Useful/Pleasant/Sensible", "Future Generations Harm", "Injunctive Norms"),
   paste(1:10)
 )
 
@@ -189,15 +190,6 @@ logit_final_results <- logit_final_results %>%
   mutate(term = fct_reorder(term,estimate),
          pretty_term = fct_reorder(pretty_term,estimate))
 
-# ggplot(logit_final_results %>% 
-#          filter(term != "(Intercept)"),
-#        aes(x=exp_est,y=term)) + 
-#   geom_vline(xintercept = 1,color="gray80") + 
-#   geom_point() + 
-#   theme_minimal() + 
-#   labs(x="Odds Multiplier",y="") + 
-#   geom_errorbarh(aes(y=term,xmin=lb,xmax=ub),height=0.1) 
-
 # Example that won't really work till you fill in the names
 png("Thesis_oddsratio_chart.png") # starts writing a png to file
 ggplot(logit_final_results %>% 
@@ -205,7 +197,7 @@ ggplot(logit_final_results %>%
        aes(x=exp_est,y=pretty_term)) + 
   geom_vline(xintercept = 1,color="gray80") + 
   geom_point() + 
-  theme_minimal(base_size = 15) + 
+  theme_minimal(base_size = 30) + 
   labs(x="\nOdds Multiplier",y="") + 
   geom_errorbarh(aes(y=pretty_term,xmin=lb,xmax=ub),height=0.1) 
 dev.off()
@@ -257,25 +249,6 @@ ggplot(kappa.test,
 kappa.test[which.max(kappa.test$kappa),]
 # Alright, now I'm going to jump back down to the 
 # work I was doing evaluating the test data.
-
-
-# JC: Okay, this is where trouble starts. Your testing data should *only* be
-# used for evaluation. You're grading your own homework by refitting the model 
-# on the testing data. I'm going to comment out the bad steps
-
-
-# TESTING DATA
-# logit_final_test <- glm(sr_12a_actions_contacted_officials_binary~
-#                           cimbenefits_comp+
-#                           desccontactnorms_all_comp+
-#                           cimperceivedrisk_comp+
-#                           sr_31_able_to_call+
-#                           sr_41c_ingenuity+
-#                           sr_10_harm_you_personally_reversed+
-#                           sr_11_harm_future_generations_reversed+
-#                           injunctcontactnorms_all_comp,
-#                         data=default_test,family=binomial)
-# summary(logit_final_test)
 
 # JC: my stuff starts here
 default_test <- default_test %>% 
@@ -370,8 +343,6 @@ prettynames_full <- tibble(
                     ),
   paste(1:43)
 )
-
-
 
 df <- df %>% 
   left_join(prettynames_full,by="term")
@@ -495,7 +466,7 @@ fviz_nbclust(nb)
 kmean_3 <- kmeans(scaled_clean, 3)
 kmean_3$centers
 kmean_3
-autoplot(kmean_3, scaled_clean, frame = TRUE)
+autoplot(kmean_3, scaled_clean, frame = TRUE)  #pca viz
 
 
 # Silhouette plot
@@ -525,15 +496,37 @@ actual_contact <- regression_clean %>%  # Desc stats on the total actual ppl who
     sr_12a_actions_contacted_officials_binary) %>%
   filter(sr_12a_actions_contacted_officials_binary==1) %>%
   summarize_if(is.numeric, mean) %>% 
-  mutate(Cluster = as.factor(c(0))) %>% 
+  mutate(Cluster = as.factor(c(0))) %>% #0 is a placeholder for this total group of actual contacters. 
   select(-sr_12a_actions_contacted_officials_binary) %>% 
   setNames(c("Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
              "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
-             "Behatt: Useful/Pleasant/Sensible", "Future Generations Harm", "Injunctive Norms", "Cluster"))
+             "Attitude: Useful/Pleasant/Sensible", "Future Generations Harm", "Injunctive Norms", "Cluster"))
   
 
 df3_clus_avg <- regression_clean %>%
   group_by(cluster) %>%
+  summarize_if(is.numeric, mean)
+
+scaled_avg <- regression_clean %>% 
+  select(cimbenefits_comp,
+         desccontactnorms_all_comp,
+         age_true,
+         cimperceivedrisk_comp,
+         sr_31_able_to_call,
+         sr_41c_ingenuity,
+         behatt_usefulpleasantsensible_comp,
+         sr_11_harm_future_generations_reversed,
+         injunctcontactnorms_all_comp,
+         cluster) %>% 
+  setNames(c("Interpersonal Discussion & Media Exposure","Descriptive Norms",
+             "Age", "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
+             "Attitude: Useful/Pleasant/Sensible", "Future Generations Harm", "Injunctive Norms", "Cluster"))
+
+data.frame(colnames(scaled_avg))
+
+scaled_avg <- scaled_avg %>% 
+  mutate_at(c(1:9), funs(c(scale(.)))) %>% 
+  group_by(Cluster) %>%
   summarize_if(is.numeric, mean)
 
 
@@ -551,8 +544,8 @@ cluster_means <- df3_clus_avg %>%
                 ) %>% 
   setNames(c("Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
              "Age", "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
-             "Behatt: Useful/Pleasant/Sensible", "Future Generations Harm", "Injunctive Norms", "Cluster"))
-#write.csv(testtable,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters_Apr22.csv", row.names = TRUE)
+             "Attitude: Useful/Pleasant/Sensible", "Future Generations Harm", "Injunctive Norms", "Cluster"))
+#write.csv(cluster_means,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters_Apr22.csv", row.names = TRUE)
 
 # Final EV list and indices
 # 6"CIM benefits", 8"Descriptive contact norms", , 11"Perceived risk", 22 (but for some reason it's 21 below)"Efficacy: able to call", 12"CC personal harm",  13"CC harm future generations" 24"sr_41c_ingenuity "injunctcontactnorms_all_comp
@@ -572,89 +565,50 @@ forplot_long <- melt(data = forplot,
                      value.name = "mean_value")
   
 forplot_all <- meanscores_all %>% 
-  dplyr::select(-Age,
-                -respondent_id)
+  dplyr::select(-Age)
 
 forplot_all_long <- melt(data = forplot_all,
                      id.vars = c("Cluster"),# "respondent_id"),
                      variable.name = "variable",
                      value.name = "mean_value")
 
-library("ggsci")
-# Plot segmentation variables means by cluster
-p <- forplot_long %>%
-  ggplot(aes(x=fct_reorder(variable, mean_value, .desc=T), y=mean_value, shape=Cluster, color=Cluster)) +
-  geom_point(size=5) +
-  theme_minimal(base_size = 15)+
-  theme(axis.text.x = element_text(angle=12, hjust=1, size=15),
-        legend.key.size = unit(1.0, "cm"),
-        legend.key = element_rect(color = NA, fill = NA),
-        legend.title.align = 0.5) +
-  scale_color_npg(name="Clusters",
-                  labels=c("Inactive", "Likely Social Contact", "Low Norms Contact")) +
-  scale_shape_manual(name="Clusters",
-                     labels=c("Inactive", "Likely Social Contact", "Low Norms Contact"),
-                     values = c(15, 16, 17)) +
-  scale_fill_discrete(labels = c("Inactive", "Likely Social Contact", "Low Norms Contact")) + #Rename the legend title and text labels.
-  labs(x="\nVariable\n", y="\nMean Value\n")
-p
+# scaled data for plot
+setDT(scaled_avg)
 
-# Plot age mean by cluster (separated from the others b/c it's on a wildly different scale)
-forplotage <- testtable %>% 
-  dplyr::select(Age, Cluster, respondent_id)
-setDT(forplotage)
-forplotage_long <- melt(data = forplotage,
-                     id.vars = c("Cluster", "respondent_id"),
+forplot_long <- melt(data = scaled_avg,
+                     id.vars = c("Cluster"),# "respondent_id"),
                      variable.name = "variable",
                      value.name = "mean_value")
 
-age_plot <- forplotage_long %>%
-  ggplot(aes(x=fct_reorder(variable, mean_value, .desc=T), y=mean_value, shape=Cluster, color=Cluster)) +
-  geom_point(size=5) +
-  theme_minimal(base_size = 15)+
-  theme(legend.key.size = unit(1.0, "cm"),
+
+
+library("ggsci")
+# Plot segmentation variables means by cluster
+p <- forplot_long %>%
+  ggplot(aes(x=variable, y=mean_value, shape=Cluster, color=Cluster)) +
+  geom_point(size=9) +
+  theme_minimal(base_size = 30)+
+  theme(axis.text.x = element_text(angle=35, hjust=.95, size=25),
+        axis.text.y = element_text(size=25),
+        legend.key.size = unit(2.0, "cm"),
         legend.key = element_rect(color = NA, fill = NA),
-        legend.title.align = 0.5) +
+        legend.title.align = 0.5,
+        legend.text = element_text(size=25),
+        legend.title = element_text(size=25)) +
+  scale_x_discrete(limits = c("Age","Worldview: Ingenuity","Future Generations Harm",
+                              "Perceived Risk", "PBC: Calling Ability","Interpersonal Discussion & Media Exposure","Attitude: Useful/Pleasant/Sensible",
+                              "Injunctive Norms","Descriptive Norms")) +
   scale_color_npg(name="Clusters",
-                  labels=c("Inactive", "Likely Social Contact", "Low Norms Contact")) +
+                  labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms")) +
   scale_shape_manual(name="Clusters",
-                     labels=c("Inactive", "Likely Social Contact", "Low Norms Contact"),
+                     labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms"),
                      values = c(15, 16, 17)) +
-  scale_fill_discrete(labels = c("Inactive", "Likely Social Contact", "Low Norms Contact")) + #Rename the legend title and text labels.
-  labs(x="\nVariable\n", y="\nMean Value\n")
-age_plot
+  scale_fill_discrete(labels = c("Unlikely to Act", "Ready to Go", "Just Add Norms")) + #Rename the legend title and text labels.
+  labs(x="Variable\n", y="\nStandardized\nMean Value\n")
+p
 
-# library(ggpubr)
-# ggarrange(p, age_plot,
-#           labels = c("A", "B"),
-#           align = "h",
-#           common.legend = T, 
-#           legend = "right")
-
-# Visualize clusters by raw numbers of responses
-plot_1 <- c(6, 8, 10, 11)
-regression_clean %>% 
-  pivot_longer(cols = plot_1,
-               names_to = "question", 
-               values_to = "response") %>% 
-  ggplot(aes(x = response, colour = cluster)) +
-  facet_wrap(vars(question), ncol = 1) +
-  geom_point(stat = "count") +
-  geom_line(stat = "count") +
-  labs(x = "Response", y = "Number of respondents") 
-
-plot_2 <- c(12, 13, 22, 25)  # JC - low priority question but why in the hell aren't last two indices the same as above?!?!?? Gah. 
-regression_clean %>% 
-  pivot_longer(cols = plot_2,
-               names_to = "question", 
-               values_to = "response") %>% 
-  ggplot(aes(x = response, colour = cluster)) +
-  facet_wrap(vars(question), ncol = 1) +
-  geom_point(stat = "count") +
-  geom_line(stat = "count") +
-  labs(x = "Response", y = "Number of respondents")
-
-
+###
+###
 ### Descriptive stats on clusters ####
 
 # number of respondents in each cluster
@@ -685,18 +639,6 @@ counts <- counts %>%
 
 write.csv(counts, "/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/meanscores_clusters_Apr22.csv", row.names = TRUE)
 
-
-regression_clean %>%  # for OVERALL categorical vars desc stats List is in-progress, just experimenting at the moment. 
-  dplyr::select(
-    age_true,
-    gender_dumvar,
-    children_dumvar,
-    sr_72_income,
-    sr_71_employment_status
-  ) %>% 
-  map(summary)
-
-
 library(purrr)
 regression_clean %>%  # for categorical vars desc stats by cluster. List is in-progress, just experimenting at the moment. 
   dplyr::select(
@@ -715,106 +657,7 @@ regression_clean %>%  # for categorical vars desc stats by cluster. List is in-p
   filter(cluster==3) %>% 
   describe()
 
-
-regression_clean %>%  # Desc stats on the total actual ppl who contacted, not grouped by cluster
-  dplyr::select(
-    sr_12a_actions_contacted_officials_binary,
-    age_true,
-    cimperceivedrisk_comp,
-    sr_11_harm_future_generations_reversed,
-    sr_41c_ingenuity,
-    sr_31_able_to_call,
-    sr_10_harm_you_personally_reversed,
-    cimbenefits_comp,
-    injunctcontactnorms_all_comp,
-    desccontactnorms_all_comp,
-    race_white_dumvar,
-    gender_dumvar,
-    children_dumvar,
-    sr_75_religion_dumvar,
-    sr_56_marital_status,
-    sr_61_education,
-    sr_71_employment_status,
-    sr_72_income,
-    sr_79_political_leaning,
-  ) %>%
-  filter(sr_12a_actions_contacted_officials_binary==1) %>% 
-  mutate(n=n()) %>% 
-  map(summary)
-  
-# Experimenting with replacing the whole cluster 2 with just the non-contacters, in order to compare against that cluster sub-group against the actual contacters
-########
-#########
-#########
-#########
-#########
-#########
-#########
-#########
-
-# Grabbing just the non-contacters in cluster 2
-cluster2_noncontact <- regression_clean %>%  # Desc stats on the total actual ppl who contacted, not grouped by cluster
-  dplyr::select(
-    cimbenefits_comp,
-    desccontactnorms_all_comp,
-    cimperceivedrisk_comp,
-    sr_31_able_to_call,
-    sr_41c_ingenuity,
-    behatt_usefulpleasantsensible_comp,
-    sr_11_harm_future_generations_reversed,
-    injunctcontactnorms_all_comp,
-    sr_12a_actions_contacted_officials_binary,
-    cluster) %>% 
-  filter(cluster==2 & sr_12a_actions_contacted_officials_binary==0) %>%
-  summarize_if(is.numeric, mean) %>% 
-  mutate(Cluster = as.factor(c(20))) %>% # 20 is just a placeholder number 
-  select(-sr_12a_actions_contacted_officials_binary) %>% 
-  setNames(c("Interpersonal Discussion \n& Media Exposure","Descriptive Norms",
-             "Perceived Risk", "PBC: Calling Ability", "Worldview: Ingenuity", 
-             "Behatt: Useful/Pleasant/Sensible", "Future Generations Harm", "Injunctive Norms", "Cluster"))
-
-# stripping out clusters 1 and 3 from cluster means just for this plot
-temp <- cluster_means %>% 
-  filter(Cluster==2)
-
-
-meanscores_all <- bind_rows(temp, cluster2_noncontact, actual_contact)  # cluster_means and actual_contact are created above. 
-setDT(meanscores_all)
-
-forplot_all <- meanscores_all %>% 
-  dplyr::select(-Age)
-
-forplot_all_long <- melt(data = forplot_all,
-                         id.vars = c("Cluster"),# "respondent_id"),
-                         variable.name = "variable",
-                         value.name = "mean_value")
-
-library("ggsci")
-# Plot segmentation variables means by cluster
-p_all <- forplot_all_long %>%
-  ggplot(aes(x=fct_reorder(variable, mean_value, .desc=T), y=mean_value, shape=Cluster, color=Cluster)) +
-  geom_point(size=5) +
-  theme_minimal(base_size = 15)+
-  theme(axis.text.x = element_text(angle=12, hjust=1, size=15),
-        legend.key.size = unit(1.0, "cm"),
-        legend.key = element_rect(color = NA, fill = NA),
-        legend.title.align = 0.5) +
-  scale_color_npg(name="Clusters",
-                     labels=c("Likely Social Contact", "LSC: Non Contact", "Actual Contact")) +
-  scale_shape_manual(name="Clusters",
-                     labels=c("Likely Social Contact", "LSC: Non Contact", "Actual Contact"),
-                     values = c(17, 3, 12)) +
-  scale_fill_discrete(labels = c("Likely Social Contact", "LSC: Non Contact", "Actual Contact")) + #Rename the legend title and text labels.
-  labs(x="\nVariable\n", y="\nMean Value\n")
-p_all 
-
-
-
-
-
-
 # Determine if there are any differences between the 453 resp in Regression_Clean and the incomplete resp in original dataset
-#####
 #####
 #####
 regression_clean %>%
@@ -826,8 +669,10 @@ regression_clean %>%
                  sr_61_education,
                  sr_71_employment_status,
                  sr_72_income,
-                 sr_79_political_leaning) %>% 
-  describe()
+                 sr_79_political_leaning,
+         age_true,
+         sr_7_believe_about_climate_change) %>% 
+  map(summary)
 
 nonaccepted <- d_accept %>% 
   anti_join(regression_clean, by="respondent_id")  # anti-join grabs all of "d_accept" except those resp_ids that match in "regression_clean". So we're looking at only those in d_accept who were not chosen
@@ -841,5 +686,130 @@ nonaccepted %>%
          sr_71_employment_status,
          sr_72_income,
          sr_79_political_leaning,
-         sr_12a_actions_contacted_officials) %>% 
+         sr_12a_actions_contacted_officials,
+         sr_7_believe_about_climate_change) %>%
+  mutate(n = n()) %>% 
+  map(summary)
+
+nonaccepted %>%
+  select(age_true,
+         cimperceivedrisk_comp,
+         sr_11_harm_future_generations_reversed,
+         sr_41c_ingenuity,
+         sr_31_able_to_call,
+         behatt_usefulpleasantsensible_comp,
+         cimbenefits_comp,
+         injunctcontactnorms_all_comp,
+         desccontactnorms_all_comp) %>% 
+  mutate(n = n()) %>% 
   describe()
+
+###
+### Messing with chart sizing for thesis presentation
+### 
+default_test %>% 
+  dplyr::group_by(prob_tier) %>% 
+  dplyr::summarize(frac_contacted = mean(contacted)) %>%
+  ggplot(aes(x=prob_tier, y=frac_contacted)) +
+  geom_col() + 
+  geom_text(aes(label = scales::percent(frac_contacted)), size=8, vjust = -0.5) +
+  theme_minimal(base_size = 30) + 
+  labs(x="\nProbability Tier by Quintile\n",y="\nFraction in Tier Contacting\n") + 
+  scale_x_discrete(labels=c("[0.00295,0.0134]" = "1", "(0.0134,0.0308]" = "2", 
+                            "(0.0308,0.0697]" = "3", "(0.0697,0.234]" = "4", "(0.234,0.919]" = "5")) +
+  scale_y_continuous(label=scales::percent_format())
+
+
+# age
+exp(10*-0.03) # 0.74 for every decade
+exp(10*-0.03+2*0.01)  # .73 - .76
+
+ggplot(logit_final_results %>% 
+         dplyr::filter(term != "(Intercept)"),
+       aes(x=exp_est,y=pretty_term)) + 
+  geom_vline(xintercept = 1,color="gray80") + 
+  geom_point(size = 5) + 
+  theme_minimal(base_size = 30) + 
+  labs(x="\nOdds Multiplier",y="") + 
+  geom_errorbarh(aes(y=pretty_term,xmin=lb,xmax=ub),height=0.1, size=1) 
+
+###
+# Checking group efficacy against personal efficacy for full sample per Alex request
+ggplot(regression_clean,
+       aes(x=sr_21a_effective_actions_contacting_officials,y=efficacy_effectiveness_all_comp)) + 
+  scale_color_npg(name="Clusters",
+  labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms")) +
+  scale_shape_manual(name="Clusters",
+                     labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms"),
+                     values = c(15, 16, 17)) +
+  scale_fill_discrete(labels = c("Unlikely to Act", "Ready to Go", "Just Add Norms")) + 
+  geom_jitter(aes(color = cluster, size = 3), width = .25)+
+  theme_minimal(base_size = 30) + 
+  theme(axis.text.x = element_text(size=25),
+        axis.text.y = element_text(size=25),
+        legend.key.size = unit(2.0, "cm"),
+        legend.key = element_rect(color = NA, fill = NA),
+        legend.title.align = 0.5,
+        legend.text = element_text(size=25),
+        legend.title = element_text(size=25)) +
+  guides(colour = guide_legend(override.aes = list(size=8)))+
+  labs(x="\nPersonal Efficacy",y="Grp Eff: Effectiveness")
+
+ggplot(regression_clean,
+       aes(x=sr_21a_effective_actions_contacting_officials,y=efficacy_competresp_all_comp)) + 
+  scale_color_npg(name="Clusters",
+                  labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms")) +
+  scale_shape_manual(name="Clusters",
+                     labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms"),
+                     values = c(15, 16, 17)) +
+  scale_fill_discrete(labels = c("Unlikely to Act", "Ready to Go", "Just Add Norms")) + 
+  geom_jitter(aes(color = cluster, size = 3), width = .25)+
+  theme_minimal(base_size = 30) + 
+  theme(axis.text.x = element_text(size=25),
+        axis.text.y = element_text(size=25),
+        legend.key.size = unit(2.0, "cm"),
+        legend.key = element_rect(color = NA, fill = NA),
+        legend.title.align = 0.5,
+        legend.text = element_text(size=25),
+        legend.title = element_text(size=25)) +
+  guides(colour = guide_legend(override.aes = list(size=8)))+
+  labs(x="\nPersonal Efficacy",y="Grp Eff: Competency/Responsiveness")
+
+
+res <- cor.test(regression_clean$sr_21a_effective_actions_contacting_officials, 
+                regression_clean$efficacy_effectiveness_all_comp, method = "spearman")
+res
+
+res <- cor.test(regression_clean$sr_21a_effective_actions_contacting_officials, 
+                regression_clean$efficacy_competresp_all_comp, method = "spearman")
+res
+
+###
+###
+### messing with kmeans centroids
+regression_clean$cluster <- recode_factor(regression_clean$cluster, "1"="Unlikely to Act", "2"="Ready to Go", "3"="Just Add Norms") 
+
+# Iris dataset just to show example of this code to representative points of each cluster
+library(datasets)
+data(iris)
+k=3 #number of centroids
+model <- kmeans(iris[,1:4],k) #use only first 4 columns of iris data
+index <- c()
+
+#calculate indices of closest instance to centroid
+for (i in 1:k){
+  rowsum <- rowSums(abs(iris[which(model$cluster==i),1:4] - model$centers[i,]))
+  index[i] <- as.numeric(names(which.min(rowsum)))
+}
+index
+
+# my data 
+index=c()
+
+for (i in 1:k){
+  rowsum <- rowSums(abs(scaled_clean[which(kmean_3$cluster==i),1:9] - kmean_3$centers[i,]))
+  index[i] <- as.numeric(names(which.min(rowsum)))
+}
+index
+
+# Not working because I need to scale this data, perhaps? To match the scaled data that the clustering analysis was run on originally?

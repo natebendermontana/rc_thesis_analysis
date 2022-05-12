@@ -611,7 +611,7 @@ d_pca_CIMperceivedrisk <- d_accept %>%
     matches("sr_11_harm_future_generations_reversed"))
 
 fa.parallel(d_pca_CIMperceivedrisk, fm='minres', fa='fa')
-pca1 <- fa(d_pca_CIMperceivedrisk, nfactors = 2, rotate = "Varimax", fm="minres") 
+pca1 <- fa(d_pca_CIMperceivedrisk, nfactors = 3, rotate = "Varimax", fm="minres") 
 print(pca1)
 print(pca1$loadings,cutoff = 0.3)
 ```
