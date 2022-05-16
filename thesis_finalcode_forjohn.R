@@ -784,6 +784,19 @@ res <- cor.test(regression_clean$sr_21a_effective_actions_contacting_officials,
                 regression_clean$efficacy_competresp_all_comp, method = "spearman")
 res
 
+test <- lm(sr_21a_effective_actions_contacting_officials ~
+                         I(efficacy_competresp_all_comp^2),# + efficacy_competresp_all_comp,
+                       data = regression_clean)
+summary(test)
+#install.packages("ggiraphExtra")
+library(ggiraphExtra)
+ggPredict(test, interactive=T)
+
+plot(sr_21a_effective_actions_contacting_officials ~
+       I(efficacy_competresp_all_comp^2), data=regression_clean)
+abline(test)
+
+
 ###
 ###
 ### messing with kmeans centroids
