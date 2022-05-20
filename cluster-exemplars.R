@@ -93,6 +93,7 @@ kmean_3 <- kmeans(scaled_clean, 3)
 
 clust.centers <- kmean_3$centers
 
+scaled_check <- cbind(scaled_clean, cluster = kmean_3$cluster)
 # Nate: manually check the distance between these three centers and 
 # one or two random rows just to make sure all the crap I do below
 # is right. 
