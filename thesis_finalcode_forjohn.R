@@ -733,68 +733,68 @@ ggplot(logit_final_results %>%
   labs(x="\nOdds Multiplier",y="") + 
   geom_errorbarh(aes(y=pretty_term,xmin=lb,xmax=ub),height=0.1, size=1) 
 
-###
-# Checking group efficacy against personal efficacy for full sample per Alex request
-ggplot(regression_clean,
-       aes(x=sr_21a_effective_actions_contacting_officials,y=efficacy_effectiveness_all_comp)) + 
-  scale_color_npg(name="Clusters",
-  labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms")) +
-  scale_shape_manual(name="Clusters",
-                     labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms"),
-                     values = c(15, 16, 17)) +
-  scale_fill_discrete(labels = c("Unlikely to Act", "Ready to Go", "Just Add Norms")) + 
-  geom_jitter(aes(color = cluster, size = 3), width = .25)+
-  theme_minimal(base_size = 30) + 
-  theme(axis.text.x = element_text(size=25),
-        axis.text.y = element_text(size=25),
-        legend.key.size = unit(2.0, "cm"),
-        legend.key = element_rect(color = NA, fill = NA),
-        legend.title.align = 0.5,
-        legend.text = element_text(size=25),
-        legend.title = element_text(size=25)) +
-  guides(colour = guide_legend(override.aes = list(size=8)))+
-  labs(x="\nPersonal Efficacy",y="Grp Eff: Effectiveness")
-
-ggplot(regression_clean,
-       aes(x=sr_21a_effective_actions_contacting_officials,y=efficacy_competresp_all_comp)) + 
-  scale_color_npg(name="Clusters",
-                  labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms")) +
-  scale_shape_manual(name="Clusters",
-                     labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms"),
-                     values = c(15, 16, 17)) +
-  scale_fill_discrete(labels = c("Unlikely to Act", "Ready to Go", "Just Add Norms")) + 
-  geom_jitter(aes(color = cluster, size = 3), width = .25)+
-  theme_minimal(base_size = 30) + 
-  theme(axis.text.x = element_text(size=25),
-        axis.text.y = element_text(size=25),
-        legend.key.size = unit(2.0, "cm"),
-        legend.key = element_rect(color = NA, fill = NA),
-        legend.title.align = 0.5,
-        legend.text = element_text(size=25),
-        legend.title = element_text(size=25)) +
-  guides(colour = guide_legend(override.aes = list(size=8)))+
-  labs(x="\nPersonal Efficacy",y="Grp Eff: Competency/Responsiveness")
-
-
-res <- cor.test(regression_clean$sr_21a_effective_actions_contacting_officials, 
-                regression_clean$efficacy_effectiveness_all_comp, method = "spearman")
-res
-
-res <- cor.test(regression_clean$sr_21a_effective_actions_contacting_officials, 
-                regression_clean$efficacy_competresp_all_comp, method = "spearman")
-res
-
-test <- lm(sr_21a_effective_actions_contacting_officials ~
-                         I(efficacy_competresp_all_comp^2),# + efficacy_competresp_all_comp,
-                       data = regression_clean)
-summary(test)
-#install.packages("ggiraphExtra")
-library(ggiraphExtra)
-ggPredict(test, interactive=T)
-
-plot(sr_21a_effective_actions_contacting_officials ~
-       I(efficacy_competresp_all_comp^2), data=regression_clean)
-abline(test)
+# ###
+# # Checking group efficacy against personal efficacy for full sample per Alex request
+# ggplot(regression_clean,
+#        aes(x=sr_21a_effective_actions_contacting_officials,y=efficacy_effectiveness_all_comp)) + 
+#   scale_color_npg(name="Clusters",
+#   labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms")) +
+#   scale_shape_manual(name="Clusters",
+#                      labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms"),
+#                      values = c(15, 16, 17)) +
+#   scale_fill_discrete(labels = c("Unlikely to Act", "Ready to Go", "Just Add Norms")) + 
+#   geom_jitter(aes(color = cluster, size = 3), width = .25)+
+#   theme_minimal(base_size = 30) + 
+#   theme(axis.text.x = element_text(size=25),
+#         axis.text.y = element_text(size=25),
+#         legend.key.size = unit(2.0, "cm"),
+#         legend.key = element_rect(color = NA, fill = NA),
+#         legend.title.align = 0.5,
+#         legend.text = element_text(size=25),
+#         legend.title = element_text(size=25)) +
+#   guides(colour = guide_legend(override.aes = list(size=8)))+
+#   labs(x="\nPersonal Efficacy",y="Grp Eff: Effectiveness")
+# 
+# ggplot(regression_clean,
+#        aes(x=sr_21a_effective_actions_contacting_officials,y=efficacy_competresp_all_comp)) + 
+#   scale_color_npg(name="Clusters",
+#                   labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms")) +
+#   scale_shape_manual(name="Clusters",
+#                      labels=c("Unlikely to Act", "Ready to Go", "Just Add Norms"),
+#                      values = c(15, 16, 17)) +
+#   scale_fill_discrete(labels = c("Unlikely to Act", "Ready to Go", "Just Add Norms")) + 
+#   geom_jitter(aes(color = cluster, size = 3), width = .25)+
+#   theme_minimal(base_size = 30) + 
+#   theme(axis.text.x = element_text(size=25),
+#         axis.text.y = element_text(size=25),
+#         legend.key.size = unit(2.0, "cm"),
+#         legend.key = element_rect(color = NA, fill = NA),
+#         legend.title.align = 0.5,
+#         legend.text = element_text(size=25),
+#         legend.title = element_text(size=25)) +
+#   guides(colour = guide_legend(override.aes = list(size=8)))+
+#   labs(x="\nPersonal Efficacy",y="Grp Eff: Competency/Responsiveness")
+# 
+# 
+# res <- cor.test(regression_clean$sr_21a_effective_actions_contacting_officials, 
+#                 regression_clean$efficacy_effectiveness_all_comp, method = "spearman")
+# res
+# 
+# res <- cor.test(regression_clean$sr_21a_effective_actions_contacting_officials, 
+#                 regression_clean$efficacy_competresp_all_comp, method = "spearman")
+# res
+# 
+# test <- lm(sr_21a_effective_actions_contacting_officials ~
+#                          I(efficacy_competresp_all_comp^2),# + efficacy_competresp_all_comp,
+#                        data = regression_clean)
+# summary(test)
+# #install.packages("ggiraphExtra")
+# library(ggiraphExtra)
+# ggPredict(test, interactive=T)
+# 
+# plot(sr_21a_effective_actions_contacting_officials ~
+#        I(efficacy_competresp_all_comp^2), data=regression_clean)
+# abline(test)
 
 
 ###
@@ -824,5 +824,40 @@ for (i in 1:k){
   index[i] <- as.numeric(names(which.min(rowsum)))
 }
 index
-
 # Not working because I need to scale this data, perhaps? To match the scaled data that the clustering analysis was run on originally?
+
+### 
+### 
+### PAMM approach
+### 
+### 
+library(cluster)
+
+pam_evs <- regression_clean %>% 
+  select(respondent_id,
+                cimbenefits_comp,
+                desccontactnorms_all_comp,
+                cimperceivedrisk_comp,
+                sr_31_able_to_call,
+                sr_41c_ingenuity,
+                behatt_usefulpleasantsensible_comp,
+                sr_11_harm_future_generations_reversed,
+                injunctcontactnorms_all_comp,
+                age_true
+  )
+
+# Standardize variables
+pam_scaled <- pam_evs %>% 
+  mutate_at(c(2:10), funs(c(scale(.))))  # scale vars except for resp_id
+
+pamresult <- pam(pam_scaled, k = 3)  # run pam clustering algorithm
+pamresult$medoids  # tells us repondent_ids for the three medoids that we can filter by below
+
+regression_clean$pamcluster = pamresult$cluster  # add cluster membership back into full dataframe
+
+# looking at the three pam medoids. Doesn't quite line up with the clusters we found using k-means; cluster 2 from k-means is represented twice when using pam. 
+# "cluster" var in regression_clean is the result of the k-means approach. "pamcluster" is the result of this pam approach. Added them side-by-side to check for discrepancy. 
+# I assume this is an issue?? 
+cluster_reps <- regression_clean %>%  
+  filter(respondent_id %in%
+           c("11865426794","11870150283","11877343624"))
