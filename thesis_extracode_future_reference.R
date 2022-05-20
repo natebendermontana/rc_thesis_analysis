@@ -1,3 +1,4 @@
+range_1 <- function(x){   (x - min(x))/(max(x)-min(x)) * (4 - 0) + 0 }  # scaling age between 0 and 5 so it approximates the same range as the rest of the variables.
 
 
 ### linear regression with future contact intentions

@@ -1,5 +1,7 @@
 .DS_Store
 /old
+/plots
+/output_tables
 *.png
 *.pdf
 # History files

@@ -71,7 +71,10 @@ regression_clean <- regression_clean %>%
 ```
 
 ```{r}
-# describe(regression_clean)
+#describe(regression_clean)
+
+describe(regression_clean$sr_61_education)
+
 ```
 
 
@@ -182,9 +185,9 @@ df <- results %>%
   mutate(fraction_of_models = n/n.runs) %>%
   arrange(desc(n))
 
-print(df, n = Inf)
+# print(df, n = Inf)
 
-write.csv(df,"/Users/natebender/Desktop/ThesisPastactionregmodel_simulations.csv", row.names = TRUE)
+write.csv(df,"/Users/natebender/Desktop/repo/RCthesisanalysis/output_tables/ThesisPastactionregmodel_simulations.csv", row.names = TRUE)
 
 ```
 
@@ -282,6 +285,8 @@ plot(logit_final_aic)
 m1_log_preds = tidy(logit_final_aic, conf.int = T, exponentiate = T) %>%
     mutate(Model = "Past contact")
 m1_log_predstest <- subset(m1_log_preds, term !="(Intercept)") #& p.value < 0.05)  # remove intercept
+# write.csv(m1_log_predstest,"/Users/natebender/Desktop/ThesisPastactionregmodel.csv", row.names = TRUE)
+
 m1_log_predstest <- m1_log_predstest %>%
  mutate(term = c("CIM benefits", "Descriptive contact norms", "Age", "Perceived risk", "Efficacy: able to call", "CC personal harm",  "CC harm future generations"))
 

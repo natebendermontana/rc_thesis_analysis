@@ -1,10 +1,27 @@
-"","term","estimate","std.error","statistic","p.value"
-"1","(Intercept)",-6.91652188352343,1.12687920298738,-6.13776690987604,8.36895339053806e-10
-"2","cimbenefits_comp",0.513701772802894,0.20257091147147,2.53591085250779,0.011215528107583
-"3","desccontactnorms_all_comp",0.828053728990951,0.288972634918347,2.8655091483833,0.00416339243009963
-"4","cimperceivedrisk_comp",0.495975433882059,0.292176100287018,1.69752225933209,0.0895979664220813
-"5","sr_31_able_to_call",0.326546398590597,0.148135570667043,2.20437533753834,0.0274979586360397
-"6","sr_41c_ingenuity",-0.325939869394295,0.193816178357088,-1.68169588399262,0.092627826593011
-"7","sr_10_harm_you_personally_reversed",0.736100264524893,0.24704229271386,2.97965282154133,0.00288575244496618
-"8","sr_11_harm_future_generations_reversed",-0.968401299203999,0.335294835033425,-2.88820822160133,0.0038744330053455
-"9","injunctcontactnorms_all_comp",0.622646661067963,0.296958562067412,2.09674594574114,0.0360160709118808
+,term,estimate,std.error,statistic,p.value,,,
+1,desccontactnorms_all_comp,0.83,0.29,2.86,0.00,,,
+2,sr_10_harm_you_personally_reversed,0.69,0.25,2.73,0.01,,,
+3,injunctcontactnorms_all_comp,0.59,0.30,1.95,0.05,,,
+4,cimperceivedrisk_comp,0.52,0.29,1.77,0.08,,,
+5,cimbenefits_comp,0.52,0.20,2.56,0.01,,,
+6,sr_31_able_to_call,0.32,0.15,2.18,0.03,,,
+7,age_true,-0.01,0.01,-0.68,0.50,,,
+8,sr_41c_ingenuity,-0.34,0.19,-1.75,0.08,,,
+9,sr_11_harm_future_generations_reversed,-0.95,0.34,-2.83,0.00,,,
+10,(Intercept),-6.36,1.38,-4.59,0.00,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,Type,Variable,"_ 
+number of items",Scale,Coefficient,SD,T-Statistic,P-Value
+,,,,,,,,
+,,Descriptive Norms,0.94 (8),1-5,0.83,0.29,2.86,0
+,,Personal Harm,,1-5,0.69,0.25,2.73,0.01
+,,Injunctive Norms,0.98 (8),1-5,0.59,0.3,1.95,0.05
+,,Perceived Risk,0.91 (3),1-5,0.52,0.29,1.77,0.08
+,,Interpersonal Discussion & Media Exposure,0.79 (3),1-5,0.52,0.2,2.56,0.01
+,,,,,,,,
+,,Perceived Behavioral Control: Calling Ability,,1-6,0.32,0.15,2.18,0.03
+,,Age,,Continuous,-0.01,0.01,-0.68,0.5
+,,Worldview: Ingenuity,,1-5,-0.34,0.19,-1.75,0.08
+,,Future Generations Harm,,1-5,-0.95,0.34,-2.83,0
