@@ -126,6 +126,28 @@ regression_clean %>%
   data.frame() %>% 
   t() # transpose just to make it print better
 
+# Let's display the top 5-ish by cluster
+percentile <- 5/nrow(regression_clean)
+
+for(i in 1:3){
+  
+  cutoff <- quantile(dist.holder[,i],probs=percentile)
+
+  print(paste("Cluster Number ",i))
+  print("Regression Clean")
+  print(
+    regression_clean[dist.holder[,i] <= cutoff,] %>% 
+      data.frame()
+  )
+  
+  print("Scaled Clean")
+  print(
+    scaled_clean[dist.holder[,i] <= cutoff,]
+  )
+  
+  print("----------------------------------------------------")
+    
+}
 
 
 
