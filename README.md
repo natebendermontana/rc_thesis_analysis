@@ -1,5 +1,5 @@
 # RCthesisanalysis
-Analysis of National Survey data for RC master's thesis
+Analysis of National Survey data for Resource Conservation master's thesis
 
 
 From Nate:
