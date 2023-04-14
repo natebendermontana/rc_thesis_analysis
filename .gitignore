@@ -1,5 +1,6 @@
 *.csv
 /cleandata
+/output_tables
 
 .DS_Store
 /old
