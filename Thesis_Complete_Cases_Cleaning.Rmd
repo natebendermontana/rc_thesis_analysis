@@ -349,6 +349,7 @@ d_accept$children_dumvar <- recode_factor(d_accept$children_dumvar, "1"="childre
 d_accept <- d_accept %>% 
   mutate(sr_75_religion_dumvar = factor(d_accept$sr_75_religion, ordered=FALSE))
 d_accept$sr_75_religion_dumvar <- recode_factor(d_accept$sr_75_religion, "1"="religious", "2"="religious", "3"="religious", "4"="religious", "5"="religious", "6"="religious", "7"="religious", "8"="religious", "9"="religious", "10"="religious", "11"="religious", "12"="notreligious", "13"="notreligious", "14"="notreligious", "0"="notreligious")
+
 ```
 
 ## Factor Analysis
@@ -359,7 +360,7 @@ $$\\[.05in]$$
 One factor solution:   
 1. Two-item factor consisting of the two dynamic norms questions (changes in the number of ppl contacting reps in the past and future)
 ```{r, eval=T, echo=F, warning=F}
-res <- cor.test(d_accept$sr_24_past_contact,d_accept$sr_25_future_contact, method = "spearman")
+res <- cor.test(d_accept$sr_24_past_contact_reversed,d_accept$sr_25_future_contact_reversed, method = "spearman")
 print(res)
 
 # Create composite variable
@@ -442,7 +443,7 @@ d_accept <- d_accept %>%
 $$\\[.05in]$$
 #### Descriptive Norms (role models) - 2nd factor (All) - Cronbach Alpha
 ```{r, eval=T, echo=F}
-d_pca_descriptivecontactnorms_all <- d_accept %>% 
+d_pca_descriptiverolemodelnorms_all <- d_accept %>% 
   dplyr::select(
     matches("sr_20a_rolemodels_parents"),
     matches("sr_20b_rolemodels_spouse"),
@@ -646,7 +647,7 @@ d_accept <- d_accept %>%
 # sr_10_harm_you_personally_reversed
 
 # single var
-describe(d_accept$sr_11_harm_future_generations_reversed)
+# describe(d_accept$sr_11_harm_future_generations_reversed)
 ```
 
 $$\\[.05in]$$

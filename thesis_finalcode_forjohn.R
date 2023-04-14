@@ -661,7 +661,7 @@ regression_clean %>%  # for categorical vars desc stats by cluster. List is in-p
 #####
 #####
 regression_clean %>%
-  select(race_white_dumvar,
+  dplyr::select(race_white_dumvar,
                  gender_dumvar,
                  children_dumvar,
                  sr_75_religion_dumvar,
@@ -674,7 +674,7 @@ regression_clean %>%
          sr_7_believe_about_climate_change) %>% 
   map(summary)
 
-nonaccepted <- d_accept %>% 
+Anonaccepted <- d_accept %>% 
   anti_join(regression_clean, by="respondent_id")  # anti-join grabs all of "d_accept" except those resp_ids that match in "regression_clean". So we're looking at only those in d_accept who were not chosen
 nonaccepted %>%
   select(race_white_dumvar,
@@ -797,67 +797,3 @@ ggplot(logit_final_results %>%
 # abline(test)
 
 
-###
-###
-### messing with kmeans centroids
-regression_clean$cluster <- recode_factor(regression_clean$cluster, "1"="Unlikely to Act", "2"="Ready to Go", "3"="Just Add Norms") 
-
-# Iris dataset just to show example of this code to representative points of each cluster
-library(datasets)
-data(iris)
-k=3 #number of centroids
-model <- kmeans(iris[,1:4],k) #use only first 4 columns of iris data
-index <- c()
-
-#calculate indices of closest instance to centroid
-for (i in 1:k){
-  rowsum <- rowSums(abs(iris[which(model$cluster==i),1:4] - model$centers[i,]))
-  index[i] <- as.numeric(names(which.min(rowsum)))
-}
-index
-
-# my data 
-index=c()
-
-for (i in 1:k){
-  rowsum <- rowSums(abs(scaled_clean[which(kmean_3$cluster==i),1:9] - kmean_3$centers[i,]))
-  index[i] <- as.numeric(names(which.min(rowsum)))
-}
-index
-# Not working because I need to scale this data, perhaps? To match the scaled data that the clustering analysis was run on originally?
-
-### 
-### 
-### PAMM approach
-### 
-### 
-library(cluster)
-
-pam_evs <- regression_clean %>% 
-  select(respondent_id,
-                cimbenefits_comp,
-                desccontactnorms_all_comp,
-                cimperceivedrisk_comp,
-                sr_31_able_to_call,
-                sr_41c_ingenuity,
-                behatt_usefulpleasantsensible_comp,
-                sr_11_harm_future_generations_reversed,
-                injunctcontactnorms_all_comp,
-                age_true
-  )
-
-# Standardize variables
-pam_scaled <- pam_evs %>% 
-  mutate_at(c(2:10), funs(c(scale(.))))  # scale vars except for resp_id
-
-pamresult <- pam(pam_scaled, k = 3)  # run pam clustering algorithm
-pamresult$medoids  # tells us repondent_ids for the three medoids that we can filter by below
-
-regression_clean$pamcluster = pamresult$cluster  # add cluster membership back into full dataframe
-
-# looking at the three pam medoids. Doesn't quite line up with the clusters we found using k-means; cluster 2 from k-means is represented twice when using pam. 
-# "cluster" var in regression_clean is the result of the k-means approach. "pamcluster" is the result of this pam approach. Added them side-by-side to check for discrepancy. 
-# I assume this is an issue?? 
-cluster_reps <- regression_clean %>%  
-  filter(respondent_id %in%
-           c("11865426794","11870150283","11877343624"))
