@@ -1,7 +1,3 @@
-# Strive for just the libraries you need for the task at hand. All at the top. 
-# idea is for every line to work immediately on my machine, other than installing
-# packages I don't have. 
-
 library(here)
 library(dplyr)
 library(tidyverse)
