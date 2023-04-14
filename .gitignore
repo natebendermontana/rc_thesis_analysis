@@ -3,7 +3,6 @@
 
 .DS_Store
 /old
-/output_tables
 *.png
 *.pdf
 # History files
