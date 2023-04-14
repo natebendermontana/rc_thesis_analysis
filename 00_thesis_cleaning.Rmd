@@ -7,7 +7,7 @@ output: html_document
 ---
 
 ```{r child code and missing values extra ignore, eval=F, include=F, echo=F}
-# COMMENTING OUT THIS BLOCK OF CODE FOR NOW. CAN COME BACK TO IT LATER IF WE WANT TO GET MORE GRANULAR WITH SEPARATING CHILDREN>18 AND DEPENDENTS. 
+# COMMENTING OUT THIS BLOCK OF CODE. CAN COME BACK TO IT LATER IF WE WANT TO GET MORE GRANULAR WITH SEPARATING CHILDREN>18 AND DEPENDENTS. 
 # # children_responded dummy var (1 category: 1==q answered, NA==question skipped)
 # d_accept <- d_accept %>%
 #   mutate(children_responded = ifelse(d_accept$sr_57i_dependents >= 1 | d_accept$sr_57j_adultchildren >= 1 | d_accept$sr_57k_nochildren==0,1,0))
