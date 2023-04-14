@@ -36,7 +36,6 @@ regression_clean <- regression_clean %>%
 
 
 # Cut down for model
-
 data_for_regression <- regression_clean %>% 
   select(sr_12a_actions_contacted_officials_binary,
     age_true,
