@@ -1,6 +1,10 @@
 *.csv
 /cleandata
 /output_tables
+thesis_extracode_future_reference.R
+thesis_pastactionregmodel.csv
+thesis_intermediate_exploring_viz.R
+
 
 .DS_Store
 /old
