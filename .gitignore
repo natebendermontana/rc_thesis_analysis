@@ -1,3 +1,6 @@
+*.csv
+/cleandata
+
 .DS_Store
 /old
 /plots
